@@ -1,0 +1,15 @@
+numpy
+pandas
+requests
+beautifulsoup4
+tqdm
+xarray
+cftime
+cdsapi
+netCDF4
+python-dateutil
+scipy
+joblib
+lifelines
+scikit-learn
+matplotlib
