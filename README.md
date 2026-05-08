@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Previsões Climáticas Sazonais Calibradas - Multimodelo e Modelos Individuais 
 # Dois conjuntos de modelos diferentes são usados p/ construir o Multimodelo + CPTEC-BAM1.2
 # As duas bases de modelo usadas são: NMME e COPERNICUS
@@ -44,7 +45,3 @@ pip install -r requirements.txt
 2. Execute qualquer módulo usando o Python com -m, por exemplo:
 
 python -m src.sazonal.data.download
-
-
-
-
