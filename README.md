@@ -1,7 +1,7 @@
 <<<<<<< HEAD
-# Previsões Climáticas Sazonais Calibradas - Multimodelo e Modelos Individuais 
-# Dois conjuntos de modelos diferentes são usados p/ construir o Multimodelo + CPTEC-BAM1.2
-# As duas bases de modelo usadas são: NMME e COPERNICUS
+### Previsões Climáticas Sazonais Calibradas - Multimodelo e Modelos Individuais 
+### Dois conjuntos de modelos diferentes são usados p/ construir o Multimodelo + CPTEC-BAM1.2
+### As duas bases de modelo usadas são: NMME e COPERNICUS
 
 Este projeto realiza a geração de previsões climáticas sazonais utilizando diferentes modelos climáticos, tanto individualmente quanto em conjunto via multimodelo. As previsões são processadas em três versões:
 
