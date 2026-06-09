@@ -1,141 +1,230 @@
-import os
 import numpy as np
 import pandas as pd
 import xarray as xr
-import netCDF4
 import calendar
-from pathlib import Path
-from datetime import date, datetime,timedelta
-from dateutil.relativedelta import *
-from collections import defaultdict
+from src.config.loader import PARAMETERS_RUN
+from src.config.config_path import PATH_OBS
+from src.processing.data_processing import build_periods_obs
 
 class Observation:
-    def __init__(self, path_obs):
-        self.path_obs = path_obs
 
-    def climatology_obs(self, base, month_obs):
-        if base == "nmme":
-            years_hcst = range(1991, 2021)
-        elif base == "copernicus":
-            years_hcst = range(1993, 2017)     
-        results = []
-        for i in range(5):
-            for year in years_hcst:
-                start_date = pd.Timestamp(year=year, month=month_obs, day=1)
-                date = start_date + pd.DateOffset(months=i)
-                results.append((date.month, date.year))
-        return results
+    def __init__(
+        self, 
+        base: str, 
+        var: str, 
+        month_obs: int
+    ):
+        self.base = base
+        self.var = var
+        self.month_obs = month_obs
 
-    def read_obs_file(self, base, month_obs, var):
-        '''Lê os arquivos das observações para todos os anos da climatologia + meses à frente'''
-        climatology = self.climatology_obs(base, month_obs)
-        obs_data = defaultdict(dict)  # Mês -> {Ano -> DataArray}
-        for month, year in climatology:
-            ndays = calendar.monthrange(year, month)[1]
-            month_name = calendar.month_abbr[month].capitalize()
-            month_num = f"{month:02d}"
-            if var == "prec": 
-                file_name_obs = f"{self.path_obs}/gpcp/{year}/obs_gpcp_prec_mon_mean_{year}{month_num}01.nc"
-                var_name = "precip"
-            elif var == "t2mt":
-                file_name_obs = f"{self.path_obs}/era5/obs_era5_t2mt_monthly_interp_{year}{month_num}01.nc"
-                var_name = "t2m"
-            
-            ds = xr.open_dataset(file_name_obs, decode_timedelta=True)
-            #print(ds.lat[37])
-            #print(ds.lon[122])
+        self.periods = PARAMETERS_RUN["periods"]
 
-            data = ds[var_name].squeeze()
+        self.climatology_dates = self.get_climatology_dates()
 
-            if var == "prec":
-                #data = data.where(data >= 0)
-                data = data * ndays
-            elif var == "t2mt":
-                data = data - 273.15
+    def get_climatology_dates(self) -> dict[int, list[pd.Timestamp]]:
+        '''Gera um dicionário com todas as datas do período climatológico.'''
+        
+        climatology = PARAMETERS_RUN["bases"][self.base]["climatology"]
 
-            obs_data[month][year] = data  # agora é um dicionário dentro de outro
-            ds.close()
+        years = range(
+            climatology["start_year"], 
+            climatology["end_year"] + 1
+        )
 
-        return obs_data
-
-    def calculate_obs_periods(self, base, month_obs, var):
-        '''Faz os acumulados ou médias para trimestre 0, 1 e 2; seleciona mês 1, 2, 3 e 4'''
-        obs_data = self.read_obs_file(base, month_obs, var)
-
-        periods = {
-            "mnth00": (0, 1), "mnth01": (1, 2), "mnth02": (2, 3),
-            "mnth03": (3, 4), "mnth04": (4, 5),
-            "seas00": (0, 3), "seas01": (1, 4), "seas02": (2, 5)
+        dates_by_year = {
+            year: []
+            for year in years
         }
 
-        month_sequence = list(obs_data.keys())
-        obs_periods = {}
+        for year in years:
 
-        for label, (start_idx, end_idx) in periods.items():
-            months = month_sequence[start_idx:end_idx]
-            obs_periods[label] = []
-            n_anos = min(len(obs_data[m]) for m in months) 
+            start_date = pd.Timestamp(
+                year=year, 
+                month=self.month_obs, 
+                day=1
+            )
 
-            for i in range(n_anos):
-                if label.startswith("mnth"):
-                    m = months[0]
-                    ano_i = list(obs_data[m].keys())[i]
-                    obs_periods[label].append(obs_data[m][ano_i])
+            for i in range(5): #5 meses a frente
 
-                elif label.startswith("seas"):
-                    acumulado = 0
-                    for m in months:
-                        ano_i = list(obs_data[m].keys())[i]
-                        acumulado += obs_data[m][ano_i]
+                dates_by_year[year].append(
+                    start_date + pd.DateOffset(months=i)
+                )
+                
+        return dates_by_year
 
-                    if var == "t2mt":
-                        acumulado = acumulado / 3
+    def load_observation_year(
+        self,
+        year_climatology: int
+    ) -> xr.DataArray:
+        ''' Carrega os dados das observações para um determinado ano de climatologia. '''
 
-                    obs_periods[label].append(acumulado)
-   
-        return obs_periods
+        obs_config = {
 
+            "prec": { 
 
+                "var_name": "precip",
 
-    def mean_std_anom_obs(self, base, month_obs, var):
-        '''Calcula a média, desvio padrão e anomalia da climatologia das observações'''
-        obs_periods = self.calculate_obs_periods(base, month_obs, var) 
+                "path": lambda year, month:(
+                    PATH_OBS /
+                    "gpcp"/
+                    str(year) / 
+                    f"obs_gpcp_prec_mon_mean_{year}{month:02d}01.nc"                
+            ),
 
-        # Períodos que queremos calcular estatísticas
-        selected_periods = ['mnth00','mnth01', 'mnth02', 'mnth03', 'mnth04',
-                            'seas00', 'seas01', 'seas02']
+                "transform": lambda data, ndays: data * ndays
+            },
 
-        stats = {}
+            "t2mt": {
 
-        for label in selected_periods:
-            data = obs_periods.get(label)
-            data_array = np.array(data)
+                "var_name": "t2m",
 
-            # Calcula média, desvio padrão e anomalias
-            mean = np.nanmean(data_array, axis=0)
-            mediana = np.nanmedian(data_array, axis=0)
-            std = np.nanstd(data_array, axis=0)
-            tercil_inf = np.nanpercentile(data_array, 33.33, axis=0)
-            tercil_sup = np.nanpercentile(data_array, 66.66, axis=0)
-            obs_total = data_array      
-            anomalias = obs_total - mean     
+                "path": lambda year, month:(
+                    PATH_OBS /
+                    "era5"/ 
+                    f"obs_era5_t2mt_monthly_interp_{year}{month:02d}01.nc"
+                ),
 
-            # Armazena os resultados
-            stats[label] = {
-                'total': obs_total,
-                'mean': mean,      
-                'mediana': mediana,
-                'std': std,        
-                'anomaly': anomalias,   
-                'tercilinf': tercil_inf,
-                'tercilsup': tercil_sup
+                "transform": lambda data, ndays: data - 273.15                
             }
+        }
+        
+        config = obs_config[self.var]
 
-        return stats
+        monthly_data = []
 
-    def mean_std_anom_obs_gamma(self, base, month_obs, var):
+        for lead, date in enumerate(
+            self.climatology_dates[year_climatology]
+        ):
+
+            ndays = calendar.monthrange(
+                date.year, 
+                date.month
+            )[1]
+
+            file_name_obs = config["path"](
+                date.year,
+                date.month
+            )
+
+            ds = xr.open_dataset(
+                file_name_obs, 
+                decode_timedelta=True
+            )
+
+            da = ds[config["var_name"]]
+            da = da.squeeze()
+
+            da = config["transform"](
+                da, 
+                ndays
+            )
+
+            da = da.expand_dims(
+                lead=[lead]
+            )
+
+            monthly_data.append(da)
+
+        obs_data_year = xr.concat(
+            monthly_data,
+            dim="lead"
+        )
+
+        return obs_data_year
+
+    def calculate_periods_year(
+        self,
+        year_climatology: int
+    ) -> dict[str, xr.DataArray]:
+        ''' Carrega os dados observados para um ano específico e calcula os períodos de agregamento. '''
+
+        data = self.load_observation_year(year_climatology)
+
+        periods = build_periods_obs(
+             self.var,
+             data
+        )
+
+        periods_loaded = {
+            k: y.load()
+            for k, y in periods.items()
+        }
+
+        return periods_loaded
+
+    def calculate_periods_all_years(self)  -> dict[str, xr.DataArray]:
+        '''Calcula os agregados para todos os anos da climatologia'''
+
+        periods_all_years = {
+            period: []
+            for period in self.periods
+        }
+
+
+        for year in self.climatology_dates:
+
+            periods = self.calculate_periods_year(
+                year
+            )
+
+            for period, da in periods.items():
+                
+                da = da.expand_dims(year=[year])
+                periods_all_years[period].append(da)
+
+        observations = {}
+
+        for period, das in periods_all_years.items():
+
+            observations[period] = xr.concat(
+                das,
+                dim="year"
+            )
+
+        return observations
+
+
+    def calculate_observation_statistics(self) -> dict[str, dict[str, xr.DataArray]]:
+        '''Calcula as estatísticas climatológicas das observações.'''
+
+        obs = self.calculate_periods_all_years()
+
+        total, mean, median, std, tinf, tsup, iqr, anom = (
+            {}, {}, {}, {}, {}, {}, {}, {}
+        )
+
+        for period, da in obs.items():
+            
+            total[period] = da
+            mean[period] = da.mean("year")
+            median[period] = da.median("year")
+            std[period] = da.std("year")
+
+            tinf[period] = da.quantile(0.33, "year")
+            tsup[period] = da.quantile(0.66, "year")
+
+            q1 = da.quantile(0.25, "year")
+            q3 = da.quantile(0.75, "year")
+
+            iqr[period] = q3 - q1
+
+            anom[period] = da - mean[period]
+
+        return {
+            "total": total,
+            "mean": mean,
+            "std": std,
+            "tinf": tinf,   
+            "tsup": tsup,
+            "iqr": iqr,
+            "anom": anom,
+        }
+
+    def mean_std_anom_obs_gamma(self):
         '''Calcula a média, desvio padrão e anomalia da climatologia das observações'''
-        obs_periods = self.calculate_obs_periods(base, month_obs, var) 
+
+        obs_periods = self.calculate_obs_periods() 
 
         # Períodos que queremos calcular estatísticas
         selected_periods = ['mnth00','mnth01', 'mnth02', 'mnth03', 'mnth04',
@@ -175,5 +264,46 @@ class Observation:
 
         return stats
 
+# def get_periods_obs(
+#         self, 
+#         data: xr.DataArray
+# ) -> dict[str, xr.DataArray]:
+#     '''Gera os agregados (acumulados/médias) para os trimestres e meses.
+#     Importante: os períodos mensais devem vir antes dos sazonais no arquivo de configuração'''
+
+#     periods_obs = {} 
+
+#     for period, (start, end) in self.periods.items():
+
+#         is_mensal = period.startswith("mnth") 
+
+#         if is_mensal:
+
+#             sel = select_month(start, end, data)    
+#             periods_obs[period] = sel.squeeze()
+
+#         else: 
+
+#             mean = self.var == "t2mt"
+
+#             periods_obs[period] = aggregate_season(
+#                 period,
+#                 periods_obs,
+#                 mean = mean
+#             )        
+
+#     return periods_obs
+    
+obs = Observation(
+    "nmme",
+    "prec",
+    5
+)
+
+
+
+dict_obs = obs.calculate_observation_statistics()
+
+print(dict_obs["anom"]['mnth00'].shape)
 
 

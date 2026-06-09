@@ -109,7 +109,7 @@ def setup_map_sam(ax):
     # =========================
     # ESTADOS DO BRASIL
     # =========================
-    shp_estados = "/scripts/clima/denis/sazonal/src/maps/BR_UF_2022/BR_UF_2022.shp"
+    shp_estados = "/scripts/clima/denis/seasonal/src/maps/shapes/BR_UF_2022.shp"
 
     reader = shpreader.Reader(shp_estados)
 
@@ -181,7 +181,7 @@ def setup_map_sam(ax):
 # INPUT
 # =====================================================
 
-year = 2025
+year = 2016
 month = 2
 
 base_path = "/dados/mmclima/multimodelo/artigo/dados"
@@ -189,8 +189,8 @@ base_path = "/dados/mmclima/multimodelo/artigo/dados"
 file_anom = f"{base_path}/GPCP_trimestral_anom_{year}{month:02d}.nc"
 file_terc = f"{base_path}/GPCP_trimestral_tercile_{year}{month:02d}.nc"
 
-file_pksobs = "/dados/mmclima/multimodelo/sazonal/posproc/nmme/v1/forecast/gamma/multimodel/2025/2025020100/fcst_prec_pksobs_seas02_multimodel_calibrated_gamma_2025020100.nc"
-file_pkshcst = "/dados/mmclima/multimodelo/sazonal/posproc/nmme/v1/forecast/gamma/multimodel/2025/2025020100/fcst_prec_pkshcst_seas02_multimodel_calibrated_gamma_2025020100.nc"
+file_pksobs = "/dados/mmclima/multimodelo/seasonal/posproc/nmme/v1/forecast/gamma/multimodel/2025/2025020100/fcst_prec_pksobs_seas02_multimodel_calibrated_gamma_2025020100.nc"
+file_pkshcst = "/dados/mmclima/multimodelo/seasonal/posproc/nmme/v1/forecast/gamma/multimodel/2025/2025020100/fcst_prec_pkshcst_seas02_multimodel_calibrated_gamma_2025020100.nc"
 
 var_anom = "precip_anomaly"
 var_terc = "tercile_class"
@@ -329,15 +329,16 @@ def plot_pks_map(data_array, title, outfile):
 plot_pks_map(
     da_sig_obs,
     "a) Kolmogorov-Smirnov Test (Obs. GPCP 1991–2020)",
-    "/dados/mmclima/multimodelo/sazonal/figures/artigo/PKS_OBS.png"
+    "/dados/mmclima/multimodelo/seasonal/figures/artigo/echam/PKS_OBS.png"
 )
 
 plot_pks_map(
     da_sig_hcst,
     "b) Kolmogorov-Smirnov Test (Hcst. Calibrated Multi-model 1991–2020)",
-    "/dados/mmclima/multimodelo/sazonal/figures/artigo/PKS_HCST.png"
+    "/dados/mmclima/multimodelo/seasonal/figures/artigo/echam/PKS_HCST.png"
 )
 
+quit()
 # # =====================================================
 # # MAPA 1 — ANOMALIA
 # # =====================================================
@@ -413,7 +414,7 @@ plot_pks_map(
 # elif month == 11:
 #     plt.title(f"OBSERVED ANOMALY: DJF 24/25", fontsize=14)
 
-# outfile_anom = f"/dados/mmclima/multimodelo/sazonal/figures/artigo/GPCP_ANOM_MAP_AS_{year}{month:02d}.png"
+# outfile_anom = f"/dados/mmclima/multimodelo/seasonal/figures/artigo/GPCP_ANOM_MAP_AS_{year}{month:02d}.png"
 
 # plt.savefig(outfile_anom, dpi=300, bbox_inches="tight")
 # plt.close()
@@ -479,13 +480,13 @@ leg.set_zorder(100)
 if month == 8:
     plt.title(f"d) OBSERVED TERCILE CATEGORY: SON 2025", fontsize=14)
 elif month == 2:
-    plt.title(f"         d) Observed Tercile Category: MAM 2025         ", fontsize=14)    
+    plt.title(f"         d) Observed Tercile Category: MAM 2016         ", fontsize=14)    
     #plt.title(f"         d) Observed Tercile Category: MAM 2016         ", fontsize=14)    
 
 elif month == 11:
     plt.title(f"d) OBSERVED TERCILE CATEGORY: DJF 25/26", fontsize=14)
 
-outfile_terc = f"/dados/mmclima/multimodelo/sazonal/figures/artigo/GPCP_TERC_MAP_AS_{year}{month:02d}.png"
+outfile_terc = f"/dados/mmclima/multimodelo/seasonal/figures/artigo/echam/GPCP_TERC_MAP_AS_{year}{month:02d}.png"
 
 
 # Remove frame automático
@@ -556,254 +557,255 @@ calibs = ["regr","gamma","cox"]
 
 xr.set_options(use_bottleneck=False)
 
-for calib in calibs:
+for year in [2016]:
+    for calib in calibs:
 
-    # ###########
-    # #CASO 2016#
-    # ###########
-    # path_in = "/dados/mmclima/multimodelo/artigo/dados/"
+        ###########
+        #CASO 2016#
+        ###########
+        # path_in = "/dados/mmclima/multimodelo/artigo/dados/"
 
-    # # Tercil inferior
-    # file_tinf = f"prec_probtinf_seas01_multimodel_calibrated_{calib}_20250201.nc"
-    # ds_tinf = xr.open_dataset(f"{path_in}/{file_tinf}")
+        # # Tercil inferior
+        # file_tinf = f"prec_probtinf_seas01_multimodel_calibrated_{calib}_2025020100.nc"
+        # ds_tinf = xr.open_dataset(f"{path_in}/{file_tinf}")
 
-    # prob_tinf_2016 = ds_tinf["probtinf"].isel(time=25) * 100
-
-
-    # # Tercil superior
-    # file_tsup = f"prec_probtsup_seas01_multimodel_calibrated_{calib}_20250201.nc"
-    # ds_tsup = xr.open_dataset(f"{path_in}/{file_tsup}")
-
-    # prob_tsup_2016 = ds_tsup["probtsup"].isel(time=25) * 100
-
-    # # Categoria central
-    # prob_central_2016 = 100 - prob_tinf_2016 - prob_tsup_2016
+        # prob_tinf_2016 = ds_tinf["probtinf"].isel(time=25) * 100
 
 
-    # #--- Probabilidade dos tercis mais prováveis
-    # stacked = xr.concat(
-    # [prob_tinf_2016, prob_central_2016, prob_tsup_2016],
-    # dim="category"
-    # )
+        # # Tercil superior
+        # file_tsup = f"prec_probtsup_seas01_multimodel_calibrated_{calib}_2025020100.nc"
+        # ds_tsup = xr.open_dataset(f"{path_in}/{file_tsup}")
+
+        # prob_tsup_2016 = ds_tsup["probtsup"].isel(time=25) * 100
+
+        # # Categoria central
+        # prob_central_2016 = 100 - prob_tinf_2016 - prob_tsup_2016
 
 
-    # stacked["category"] = ["below", "normal", "above"]
-    # stacked_filled = stacked.fillna(0)
-    # max_idx = stacked_filled.argmax(dim="category", skipna=True)
-    # max_val = stacked_filled.max(dim="category", skipna=True)
-
-    # prob_tercile = xr.zeros_like(max_val)
-
-    # prob_tercile = prob_tercile.where(max_idx != 0, -max_val)
-    # prob_tercile = prob_tercile.where(max_idx != 2,  max_val)
-
-    # da_prob = prob_tercile
-
-    #####################
-    #CASO GERAL - ARTIGO#
-    #####################
-    path_in = f"/dados/mmclima/multimodelo/sazonal/posproc/nmme/v1/forecast/{calib}/multimodel/2025/2025020100"
-    file = f"fcst_prec_terc_seas01_multimodel_calibrated_{calib}_2025020100.nc"
-
-    file_prob = f"{path_in}/{file}"
-    var_prob  = "terc"
-
-    da_prob = xr.open_dataset(file_prob)[var_prob]
-
-    # =====================================================
-    # CONVERSÃO LONGITUDE
-    # =====================================================
-
-    da_prob = convert_lon(da_prob)
-
-    # =====================================================
-    # RECORTE AMÉRICA DO SUL
-    # =====================================================
-
-    da_prob = da_prob.sel(
-        lon=slice(lon_min, lon_max),
-        lat=slice(lat_min, lat_max)
-    )
-
-    # =====================================================
-    # NÍVEIS (IGUAL GRADS)
-    # =====================================================
-
-    clevs_prob = [-100,-90,-80,-70,-60,-50,-40,
-                40,50,60,70,80,90,100]
-
-    # =====================================================
-    # CORES (VERMELHO → BRANCO → AZUL)
-    # =====================================================
-
-    ccols_prob = [
-
-        # LOWER tercile (vermelho)
-        "#7A0000",
-        "#AE000C",
-        "#FF2E1B",
-        "#FF5F26",
-        "#FF9D37",
-        "#FBE78A",
-
-        # NEUTRO
-        "#FFFFFF",
-
-        # UPPER tercile (azul)
-        "#99FFFF",
-        "#00CCFF",
-        "#1199FF",
-        "#2A5AEA",
-        "#2A2AEA",
-        "#00007F"
-    ]
-
-    norm_prob = BoundaryNorm(clevs_prob, len(ccols_prob))
-
-    # =====================================================
-    # FIGURA
-    # =====================================================
-
-    fig3 = plt.figure(figsize=(10,8))
-    ax3 = plt.axes(projection=ccrs.PlateCarree())
-
-    setup_map_sam(ax3)
-
-    ax3.set_extent([lon_min, lon_max, lat_min, lat_max])
-
-    ax3.add_feature(cfeature.COASTLINE, linewidth=0.8)
-    ax3.add_feature(cfeature.BORDERS, linewidth=0.5)
-
-    # =====================================================
-    # PLOT MAPA
-    # =====================================================
-
-    img3 = ax3.contourf(
-        da_prob.lon,
-        da_prob.lat,
-        da_prob,
-        levels=clevs_prob,
-        colors=ccols_prob,
-        norm=norm_prob,
-        transform=ccrs.PlateCarree()
-    )
-
-    # =====================================================
-    # COLORBAR
-    # =====================================================
-
-    cb3 = plt.colorbar(
-        img3,
-        ax=ax3,
-        orientation="horizontal",
-        pad=0.1,      # distância mapa → barra
-        shrink=0.6,    # comprimento da barra
-        aspect=20     # deixa a barra mais "baixa"
-    )
-
-    cb3.set_ticks(clevs_prob)
-    cb3.ax.tick_params(labelsize=9.5)
-    cb3.outline.set_visible(False)
-
-    # # =====================================================
-    # # TEXTOS VERTICAIS (IGUAL GRADS)
-    # # =====================================================
-
-    cbax = cb3.ax
-
-    # Lower tercile (lado vermelho — esquerda)
-    cbax.text(
-        0.05, 1.2,
-        "Lower tercile",
-        ha="left",
-        va="bottom",
-        fontsize=13,
-        transform=cbax.transAxes
-    )
-
-    # Upper tercile (lado azul — direita)
-    cbax.text(
-        0.95, 1.2,
-        "Upper tercile",
-        ha="right",
-        va="bottom",
-        fontsize=13,
-        transform=cbax.transAxes
-    )
-
-    cbax.text(
-        0.5, -1.3,
-        "White: equal probability for all categories",
-        ha="center",
-        va="top",
-        fontsize=13,
-        transform=cbax.transAxes
-    )
-
-    # =====================================================
-    # TÍTULO
-    # =====================================================
-    calibs_name = {
-        "gamma": "Gamma",
-        "regr":  "Normal",
-        "cox":   "Cox"
-    }
-
-    calibs_letter = {
-        "gamma": "b)",
-        "regr":  "a)",
-        "cox":   "c)"
-    }    
-
-    linha1 = f"{calibs_letter[calib]} Calibrated Multi-Model ({calibs_name[calib]})"
-    linha2 = "Prob. most likely precip. tercile(%)"
+        # #--- Probabilidade dos tercis mais prováveis
+        # stacked = xr.concat(
+        # [prob_tinf_2016, prob_central_2016, prob_tsup_2016],
+        # dim="category"
+        # )
 
 
-    def get_forecast_title_line(month, year):
+        # stacked["category"] = ["below", "normal", "above"]
+        # stacked_filled = stacked.fillna(0)
+        # max_idx = stacked_filled.argmax(dim="category", skipna=True)
+        # max_val = stacked_filled.max(dim="category", skipna=True)
 
-        if month == 8:
-            return f"FORECAST ISSUED AUG {year} FOR SON {year}"
+        # prob_tercile = xr.zeros_like(max_val)
 
-        elif month == 2:
-            #return f"FORECAST ISSUED FEB {year} FOR MAM {year}"
-            #return f"FORECAST ISSUED FEB 2016 FOR MAM 2016"
+        # prob_tercile = prob_tercile.where(max_idx != 0, -max_val)
+        # prob_tercile = prob_tercile.where(max_idx != 2,  max_val)
 
-            return f"Forecast Issued Feb {year} for MAM {year}"
-            #return f"Forecast Issued Feb 2016 for MAM 2016"
+        # da_prob = prob_tercile
 
-        elif month == 11:
-            return f"FORECAST ISSUED NOV {year} FOR DJF {year}/{str(year+1)[-2:]}"
-            
-    linha3 = get_forecast_title_line(month, year)
+        # #####################
+        # #CASO GERAL - ARTIGO#
+        # #####################
+        path_in = f"/dados/mmclima/multimodelo/seasonal/posproc/nmme/v1/forecast/{calib}/multimodel/{year}/{year}020100"
+        file = f"fcst_prec_terc_seas01_multimodel_calibrated_{calib}_{year}020100.nc"
 
-    plt.title(
-        f"{linha1}\n{linha2}\n{linha3}",
-        fontsize=14
-    )
+        file_prob = f"{path_in}/{file}"
+        var_prob  = "terc"
 
-    # =====================================================
-    # SALVAR
-    # =====================================================
+        da_prob = xr.open_dataset(file_prob)[var_prob]
 
-    outfile_prob = f"/dados/mmclima/multimodelo/sazonal/figures/artigo/fcst_prec_terc_{calib}_MAM.png"
-    #outfile_prob = f"/dados/mmclima/multimodelo/sazonal/figures/artigo/fcst_prec_terc_{calib}_MAM2016.png"
+        # =====================================================
+        # CONVERSÃO LONGITUDE
+        # =====================================================
 
-    # Remove frame automático
-    ax3.set_frame_on(False)
+        da_prob = convert_lon(da_prob)
 
-    # Cria moldura manual
-    rect = Rectangle(
-        (0, 0), 1, 1,
-        transform=ax3.transAxes,
-        fill=False,
-        linewidth=2.5,
-        edgecolor="black",
-        zorder=1000
-    )
+        # =====================================================
+        # RECORTE AMÉRICA DO SUL
+        # =====================================================
 
-    ax3.add_patch(rect)
+        da_prob = da_prob.sel(
+            lon=slice(lon_min, lon_max),
+            lat=slice(lat_min, lat_max)
+        )
 
-    plt.savefig(outfile_prob, dpi=300, bbox_inches="tight")
-    plt.close()
+        # =====================================================
+        # NÍVEIS (IGUAL GRADS)
+        # =====================================================
 
-    print("Mapa probabilidade salvo:", outfile_prob)
+        clevs_prob = [-100,-90,-80,-70,-60,-50,-40,
+                    40,50,60,70,80,90,100]
+
+        # =====================================================
+        # CORES (VERMELHO → BRANCO → AZUL)
+        # =====================================================
+
+        ccols_prob = [
+
+            # LOWER tercile (vermelho)
+            "#7A0000",
+            "#AE000C",
+            "#FF2E1B",
+            "#FF5F26",
+            "#FF9D37",
+            "#FBE78A",
+
+            # NEUTRO
+            "#FFFFFF",
+
+            # UPPER tercile (azul)
+            "#99FFFF",
+            "#00CCFF",
+            "#1199FF",
+            "#2A5AEA",
+            "#2A2AEA",
+            "#00007F"
+        ]
+
+        norm_prob = BoundaryNorm(clevs_prob, len(ccols_prob))
+
+        # =====================================================
+        # FIGURA
+        # =====================================================
+
+        fig3 = plt.figure(figsize=(10,8))
+        ax3 = plt.axes(projection=ccrs.PlateCarree())
+
+        setup_map_sam(ax3)
+
+        ax3.set_extent([lon_min, lon_max, lat_min, lat_max])
+
+        ax3.add_feature(cfeature.COASTLINE, linewidth=0.8)
+        ax3.add_feature(cfeature.BORDERS, linewidth=0.5)
+
+        # =====================================================
+        # PLOT MAPA
+        # =====================================================
+
+        img3 = ax3.contourf(
+            da_prob.lon,
+            da_prob.lat,
+            da_prob,
+            levels=clevs_prob,
+            colors=ccols_prob,
+            norm=norm_prob,
+            transform=ccrs.PlateCarree()
+        )
+
+        # =====================================================
+        # COLORBAR
+        # =====================================================
+
+        cb3 = plt.colorbar(
+            img3,
+            ax=ax3,
+            orientation="horizontal",
+            pad=0.1,      # distância mapa → barra
+            shrink=0.6,    # comprimento da barra
+            aspect=20     # deixa a barra mais "baixa"
+        )
+
+        cb3.set_ticks(clevs_prob)
+        cb3.ax.tick_params(labelsize=9.5)
+        cb3.outline.set_visible(False)
+
+        # # =====================================================
+        # # TEXTOS VERTICAIS (IGUAL GRADS)
+        # # =====================================================
+
+        cbax = cb3.ax
+
+        # Lower tercile (lado vermelho — esquerda)
+        cbax.text(
+            0.05, 1.2,
+            "Lower tercile",
+            ha="left",
+            va="bottom",
+            fontsize=13,
+            transform=cbax.transAxes
+        )
+
+        # Upper tercile (lado azul — direita)
+        cbax.text(
+            0.95, 1.2,
+            "Upper tercile",
+            ha="right",
+            va="bottom",
+            fontsize=13,
+            transform=cbax.transAxes
+        )
+
+        cbax.text(
+            0.5, -1.3,
+            "White: equal probability for all categories",
+            ha="center",
+            va="top",
+            fontsize=13,
+            transform=cbax.transAxes
+        )
+
+        # =====================================================
+        # TÍTULO
+        # =====================================================
+        calibs_name = {
+            "gamma": "Gamma",
+            "regr":  "Normal",
+            "cox":   "Cox"
+        }
+
+        calibs_letter = {
+            "gamma": "b)",
+            "regr":  "a)",
+            "cox":   "c)"
+        }    
+
+        linha1 = f"{calibs_letter[calib]} Calibrated Multi-Model ({calibs_name[calib]})"
+        linha2 = "Prob. most likely precip. tercile(%)"
+
+
+        def get_forecast_title_line(month, year):
+
+            if month == 8:
+                return f"FORECAST ISSUED AUG {year} FOR SON {year}"
+
+            elif month == 2:
+                #return f"FORECAST ISSUED FEB {year} FOR MAM {year}"
+                #return f"FORECAST ISSUED FEB 2016 FOR MAM 2016"
+
+                return f"Forecast Issued Feb {year} for MAM {year}"
+                #return f"Forecast Issued Feb 2016 for MAM 2016"
+
+            elif month == 11:
+                return f"FORECAST ISSUED NOV {year} FOR DJF {year}/{str(year+1)[-2:]}"
+                
+        linha3 = get_forecast_title_line(month, year)
+
+        plt.title(
+            f"{linha1}\n{linha2}\n{linha3}",
+            fontsize=14
+        )
+
+        # =====================================================
+        # SALVAR
+        # =====================================================
+
+        #outfile_prob = f"/dados/mmclima/multimodelo/seasonal/figures/artigo/echam/fcst_prec_terc_{calib}_MAM.png"
+        outfile_prob = f"/dados/mmclima/multimodelo/seasonal/figures/artigo/echam/fcst_prec_terc_{calib}_MAM{year}.png"
+
+        # Remove frame automático
+        ax3.set_frame_on(False)
+
+        # Cria moldura manual
+        rect = Rectangle(
+            (0, 0), 1, 1,
+            transform=ax3.transAxes,
+            fill=False,
+            linewidth=2.5,
+            edgecolor="black",
+            zorder=1000
+        )
+
+        ax3.add_patch(rect)
+
+        plt.savefig(outfile_prob, dpi=300, bbox_inches="tight")
+        plt.close()
+
+        print("Mapa probabilidade salvo:", outfile_prob)

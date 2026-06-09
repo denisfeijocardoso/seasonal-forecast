@@ -6,7 +6,7 @@ from scipy.stats import gamma
 import os
 import calendar
 
-obs = xr.open_dataset("/dados/mmclima/multimodelo/sazonal/obs/gpcp/obs_gpcp_pr_mon_mean_1979-2025.nc")
+obs = xr.open_dataset("/dados/mmclima/multimodelo/seasonal/obs/gpcp/obs_gpcp_pr_mon_mean_1979-2025.nc")
 lat_obs = obs["lat"].values
 lon_obs = obs["lon"].values
 
@@ -64,7 +64,7 @@ def format_coord(lat, lon):
         
     return lat_str, lon_str
 
-outdir = "/dados/mmclima/multimodelo/sazonal/figures/artigo"
+outdir = "/dados/mmclima/multimodelo/seasonal/figures/artigo/echam"
 
 path_obs = "/dados/mmclima/multimodelo/artigo/dados"
 
@@ -98,16 +98,16 @@ mam2016_obs = (((ds_gpcp_mar2016['precip'].values * ndays_mar2016) +
 #COX#
 #####
 
-anos = [2025]
+anos = [2016, 2025]
 
 for ano in anos:
 
     if ano == 2025:
         pontos = pontos_2025
-        path_base = "/dados/mmclima/multimodelo/sazonal/posproc/nmme/v1/forecast/cox/multimodel/2025/2025020100"
+        path_base = "/dados/mmclima/multimodelo/seasonal/posproc/nmme/v1/forecast/cox/multimodel/2025/2025020100"
         arq_x = f"{path_base}/fcst_prec_varx_seas01_multimodel_calibrated_cox_2025020100.nc"
         arq_fcst = f"{path_base}/fcst_prec_probyfcst_seas01_multimodel_calibrated_cox_2025020100.nc"
-        arq_obs  = f"{path_base}/fcst_prec_probybobs_seas01_multimodel_calibrated_cox_2025020100.nc"
+        arq_obs  = f"{path_base}/fcst_prec_probyobs_seas01_multimodel_calibrated_cox_2025020100.nc"
 
         # ===============================
         # Abrindo arquivos auxiliares
@@ -127,7 +127,7 @@ for ano in anos:
         ds_coef = xr.open_dataset(f"{path_base}/fcst_prec_coef_seas01_multimodel_calibrated_cox_2025020100.nc")
 
         # Tercis (outro diretório)
-        path_regr = "/dados/mmclima/multimodelo/sazonal/posproc/nmme/v1/forecast/regr/multimodel/2025/2025020100"
+        path_regr = "/dados/mmclima/multimodelo/seasonal/posproc/nmme/v1/forecast/regr/multimodel/2025/2025020100"
 
         ds_terc_inf = xr.open_dataset(f"{path_regr}/fcst_prec_obstercinf_seas01_multimodel_calibrated_regr_2025020100.nc")
         ds_terc_sup = xr.open_dataset(f"{path_regr}/fcst_prec_obstercsup_seas01_multimodel_calibrated_regr_2025020100.nc")
@@ -137,10 +137,10 @@ for ano in anos:
 
     elif ano == 2016:
         pontos = pontos_2016
-        path_base = "/dados/mmclima/multimodelo/sazonal/posproc/nmme/v1/forecast/cox/multimodel/2016/2016020100"
+        path_base = "/dados/mmclima/multimodelo/seasonal/posproc/nmme/v1/forecast/cox/multimodel/2016/2016020100"
         arq_x = f"{path_base}/fcst_prec_varx_seas01_multimodel_calibrated_cox_2016020100.nc"
         arq_fcst = f"{path_base}/fcst_prec_probyfcst_seas01_multimodel_calibrated_cox_2016020100.nc"
-        arq_obs  = f"{path_base}/fcst_prec_probybobs_seas01_multimodel_calibrated_cox_2016020100.nc"
+        arq_obs  = f"{path_base}/fcst_prec_probyobs_seas01_multimodel_calibrated_cox_2016020100.nc"
 
         # ===============================
         # Abrindo arquivos auxiliares
@@ -160,7 +160,7 @@ for ano in anos:
         ds_coef = xr.open_dataset(f"{path_base}/fcst_prec_coef_seas01_multimodel_calibrated_cox_2016020100.nc")
 
         # Tercis (outro diretório)
-        path_regr = "/dados/mmclima/multimodelo/sazonal/posproc/nmme/v1/forecast/regr/multimodel/2016/2016020100"
+        path_regr = "/dados/mmclima/multimodelo/seasonal/posproc/nmme/v1/forecast/regr/multimodel/2016/2016020100"
 
         ds_terc_inf = xr.open_dataset(f"{path_regr}/fcst_prec_obstercinf_seas01_multimodel_calibrated_regr_2016020100.nc")
         ds_terc_sup = xr.open_dataset(f"{path_regr}/fcst_prec_obstercsup_seas01_multimodel_calibrated_regr_2016020100.nc")
@@ -175,7 +175,7 @@ for ano in anos:
 
     var_x = ds_x["varx"]
     var_fcst = ds_fcst["probyfcst"]
-    var_obs  = ds_obs["probybobs"]
+    var_obs  = ds_obs["probyobs"]
 
     curves_type = ["exc","cdf"]
 
@@ -257,10 +257,10 @@ for ano in anos:
                 label_obs = "Obs. MAM 2025"
             else:
                 if curvetype == "cdf":               
-                    plt.title(f"e) Precip. Fcst. Calibrated Multi-Model (Cox) \nfor MAM 2016 issued: Feb 2025 Lat:{lat_str} Lon:{lon_str}", 
+                    plt.title(f"e) Precip. Fcst. Calibrated Multi-Model (Cox) \nfor MAM 2016 issued: Feb 2016 Lat:{lat_str} Lon:{lon_str}", 
                             fontsize=12, fontweight='bold')
                 elif curvetype == "exc":
-                    plt.title(f"f) Precip. Fcst. Calibrated Multi-Model (Cox) \nfor MAM 2016 issued: Feb 2025 Lat:{lat_str} Lon:{lon_str}", 
+                    plt.title(f"f) Precip. Fcst. Calibrated Multi-Model (Cox) \nfor MAM 2016 issued: Feb 2016 Lat:{lat_str} Lon:{lon_str}", 
                             fontsize=11, fontweight='bold')   
                 label_obs = "Obs. MAM 2016"
 
@@ -350,8 +350,8 @@ for ano in anos:
                 plt.xlim(left=float(x.min()-200), right=x.max()+350)
             elif nome == "RS":
                 plt.xlim(left=float(x.min()-200), right=x.max()+250) 
-            # elif nome == "riogrande":
-            #     plt.xlim(left=float(x.min()-200), right=x.max()+50)                                              
+            elif nome == "riogrande":
+                plt.xlim(left=float(x.min()-200), right=x.max()+50)                                              
             else:
                 plt.xlim(left=float(x.min()-200), right=x.max())
             if curvetype == "cdf":
@@ -436,7 +436,7 @@ for ano in anos:
 
     if ano == 2025:
         pontos = pontos_2025
-        path_base = "/dados/mmclima/multimodelo/sazonal/posproc/nmme/v1/forecast/regr/multimodel/2025/2025020100"
+        path_base = "/dados/mmclima/multimodelo/seasonal/posproc/nmme/v1/forecast/regr/multimodel/2025/2025020100"
         arq_obsmean = f"{path_base}/fcst_prec_obsmean_seas01_multimodel_calibrated_regr_2025020100.nc"
         arq_obsstd  = f"{path_base}/fcst_prec_obsstd_seas01_multimodel_calibrated_regr_2025020100.nc"
         arq_fcstmean = f"{path_base}/fcst_prec_acum_seas01_multimodel_calibrated_regr_2025020100.nc"
@@ -455,13 +455,13 @@ for ano in anos:
         ds_corr = xr.open_dataset(f"{path_base}/fcst_prec_corr_seas01_multimodel_calibrated_regr_2025020100.nc")
 
         # Tercis (outro diretório)
-        path_regr = "/dados/mmclima/multimodelo/sazonal/posproc/nmme/v1/forecast/regr/multimodel/2025/2025020100"
+        path_regr = "/dados/mmclima/multimodelo/seasonal/posproc/nmme/v1/forecast/regr/multimodel/2025/2025020100"
         ds_terc_inf = xr.open_dataset(f"{path_regr}/fcst_prec_obstercinf_seas01_multimodel_calibrated_regr_2025020100.nc")
         ds_terc_sup = xr.open_dataset(f"{path_regr}/fcst_prec_obstercsup_seas01_multimodel_calibrated_regr_2025020100.nc")
 
     elif ano == 2016:
         pontos = pontos_2016
-        path_base = "/dados/mmclima/multimodelo/sazonal/posproc/nmme/v1/forecast/regr/multimodel/2016/2016020100"
+        path_base = "/dados/mmclima/multimodelo/seasonal/posproc/nmme/v1/forecast/regr/multimodel/2016/2016020100"
         arq_obsmean = f"{path_base}/fcst_prec_obsmean_seas01_multimodel_calibrated_regr_2016020100.nc"
         arq_obsstd  = f"{path_base}/fcst_prec_obsstd_seas01_multimodel_calibrated_regr_2016020100.nc"
         arq_fcstmean = f"{path_base}/fcst_prec_acum_seas01_multimodel_calibrated_regr_2016020100.nc"
@@ -480,7 +480,7 @@ for ano in anos:
         ds_corr = xr.open_dataset(f"{path_base}/fcst_prec_corr_seas01_multimodel_calibrated_regr_2016020100.nc")
 
         # Tercis (outro diretório)
-        path_regr = "/dados/mmclima/multimodelo/sazonal/posproc/nmme/v1/forecast/regr/multimodel/2016/2016020100"
+        path_regr = "/dados/mmclima/multimodelo/seasonal/posproc/nmme/v1/forecast/regr/multimodel/2016/2016020100"
         ds_terc_inf = xr.open_dataset(f"{path_regr}/fcst_prec_obstercinf_seas01_multimodel_calibrated_regr_2016020100.nc")
         ds_terc_sup = xr.open_dataset(f"{path_regr}/fcst_prec_obstercsup_seas01_multimodel_calibrated_regr_2016020100.nc")
 
@@ -595,10 +595,10 @@ for ano in anos:
                 label_obs = "Obs. MAM 2025"
             else:
                 if curvetype == "cdf":                
-                    plt.title(f"a) Precip. Fcst. Calibrated Multi-Model (Normal) \nfor MAM 2016 issued: Feb 2025 Lat:{lat_str} Lon:{lon_str}", 
+                    plt.title(f"a) Precip. Fcst. Calibrated Multi-Model (Normal) \nfor MAM 2016 issued: Feb 2016 Lat:{lat_str} Lon:{lon_str}", 
                             fontsize=11, fontweight='bold')
                 elif curvetype == "exc":
-                    plt.title(f"b) Precip. Fcst. Calibrated Multi-Model (Normal) \nfor MAM 2016 issued: Feb 2025 Lat:{lat_str} Lon:{lon_str}", 
+                    plt.title(f"b) Precip. Fcst. Calibrated Multi-Model (Normal) \nfor MAM 2016 issued: Feb 2016 Lat:{lat_str} Lon:{lon_str}", 
                             fontsize=11, fontweight='bold')   
 
             #Plotar linha vertical (dado observado atual)
@@ -695,93 +695,59 @@ for ano in anos:
             for spine in ax.spines.values():
                 spine.set_linewidth(1.5)
 
-            # if curvetype == "cdf":
+            if curvetype == "cdf":
 
-            #         # # ===== LEFT (estatísticas) =====
-            #         # text_left = (
-            #         #     r"$\bf{Forecast\ (x)}$" + "\n"
-            #         #     f"stdvₓ = {fcst_std[ilat,ilon]:.1f}mm\n"
-            #         #     f"meanₓ = {fcst_mean[ilat,ilon]:.1f}mm\n\n"
-            #         #     r"$\bf{Observation\ (y)}$" + "\n"
-            #         #     f"stdvᵧ = {obs_std[ilat,ilon]:.1f}mm\n"
-            #         #     f"meanᵧ = {obs_mean[ilat,ilon]:.1f}mm\n\n"
-            #         #     f"anomaly = {fcst_mean[ilat,ilon] - obs_mean[ilat,ilon]:.1f}mm\n"
-            #         #     f"r = {correlat[ilat,ilon]:.2f}"
-            #         # )
+                    # ===== RIGHT (probabilidades) =====
+                    text_right = (
+                        r"$\bf{Forecast\ (x)}$" + "\n"
+                        f"stdvₓ = {fcst_std[ilat,ilon]:.1f}mm\n"
+                        f"meanₓ = {fcst_mean[ilat,ilon]:.1f}mm\n\n"
+                        r"$\bf{Observation\ (y)}$" + "\n"
+                        f"stdvᵧ = {obs_std[ilat,ilon]:.1f}mm\n"
+                        f"meanᵧ = {obs_mean[ilat,ilon]:.1f}mm\n\n"
+                        f"anomaly = {fcst_mean[ilat,ilon] - obs_mean[ilat,ilon]:.1f}mm\n"
+                        f"r = {correlat[ilat,ilon]:.2f}\n\n"    
 
-            #         # ax.text(
-            #         #     0.02, 0.7, text_left,
-            #         #     transform=ax.transAxes,
-            #         #     fontsize=8,
-            #         #     va='top'
-            #         # )
+                        r"$\bf{Forecast}$" + "\n" +
+                        r"$\bf{Probabilities\ (p)}$" + "\n"
+                        f"P<(T1={terc_inf_val:.1f}) = {p_below_inf:.0f}%\n"
+                        f"P<(T2={terc_sup_val:.1f}) = {p_below_sup:.0f}%"
+                    )
 
-            #         # ===== RIGHT (probabilidades) =====
-            #         text_right = (
-            #             r"$\bf{Forecast\ (x)}$" + "\n"
-            #             f"stdvₓ = {fcst_std[ilat,ilon]:.1f}mm\n"
-            #             f"meanₓ = {fcst_mean[ilat,ilon]:.1f}mm\n\n"
-            #             r"$\bf{Observation\ (y)}$" + "\n"
-            #             f"stdvᵧ = {obs_std[ilat,ilon]:.1f}mm\n"
-            #             f"meanᵧ = {obs_mean[ilat,ilon]:.1f}mm\n\n"
-            #             f"anomaly = {fcst_mean[ilat,ilon] - obs_mean[ilat,ilon]:.1f}mm\n"
-            #             f"r = {correlat[ilat,ilon]:.2f}\n\n"    
+                    ax.text(
+                        0.98, 0.8, text_right,
+                        transform=ax.transAxes,
+                        fontsize=9,
+                        va='top',
+                        ha='right'
+                    )
 
-            #             r"$\bf{Forecast}$" + "\n" +
-            #             r"$\bf{Probabilities\ (p)}$" + "\n"
-            #             f"P<(T1={terc_inf_val:.1f}) = {p_below_inf:.0f}%\n"
-            #             f"P<(T2={terc_sup_val:.1f}) = {p_below_sup:.0f}%"
-            #         )
+            else:  # ===== EXC =====
 
-            #         ax.text(
-            #             0.98, 0.8, text_right,
-            #             transform=ax.transAxes,
-            #             fontsize=9,
-            #             va='top',
-            #             ha='right'
-            #         )
+                    # ===== RIGHT (estatísticas) =====
+                    text_right = (
+                        r"$\bf{Forecast\ (x)}$" + "\n"
+                        f"stdvₓ = {fcst_std[ilat,ilon]:.1f}mm\n"
+                        f"meanₓ = {fcst_mean[ilat,ilon]:.1f}mm\n\n"
+                        r"$\bf{Observation\ (y)}$" + "\n"
+                        f"stdvᵧ = {obs_std[ilat,ilon]:.1f}mm\n"
+                        f"meanᵧ = {obs_mean[ilat,ilon]:.1f}mm\n\n"
+                        f"anomaly = {fcst_mean[ilat,ilon] - obs_mean[ilat,ilon]:.1f}mm\n"
+                        f"r = {correlat[ilat,ilon]:.2f}\n\n"    
 
-            # else:  # ===== EXC =====
+                        r"$\bf{Forecast}$" + "\n" +
+                        r"$\bf{Probabilities\ (p)}$" + "\n"
+                        f"P>(T1={terc_inf_val:.1f}) = {p_above_inf:.0f}%\n"
+                        f"P>(T2={terc_sup_val:.1f}) = {p_above_sup:.0f}%"
+                    )
 
-            #         # # ===== LEFT (probabilidades) =====
-            #         # text_left = (
-            #         #     r"$\bf{Forecast}$" + "\n" +
-            #         #     r"$\bf{Probabilities\ (p)}$" + "\n"
-            #         #     f"P>(T1={terc_inf_val:.1f}) = {p_above_inf:.0f}%\n"
-            #         #     f"P>(T2={terc_sup_val:.1f}) = {p_above_sup:.0f}%"
-            #         # )
-
-            #         # ax.text(
-            #         #     0.02, 0.7, text_left,
-            #         #     transform=ax.transAxes,
-            #         #     fontsize=8,
-            #         #     va='top'
-            #         # )
-
-            #         # ===== RIGHT (estatísticas) =====
-            #         text_right = (
-            #             r"$\bf{Forecast\ (x)}$" + "\n"
-            #             f"stdvₓ = {fcst_std[ilat,ilon]:.1f}mm\n"
-            #             f"meanₓ = {fcst_mean[ilat,ilon]:.1f}mm\n\n"
-            #             r"$\bf{Observation\ (y)}$" + "\n"
-            #             f"stdvᵧ = {obs_std[ilat,ilon]:.1f}mm\n"
-            #             f"meanᵧ = {obs_mean[ilat,ilon]:.1f}mm\n\n"
-            #             f"anomaly = {fcst_mean[ilat,ilon] - obs_mean[ilat,ilon]:.1f}mm\n"
-            #             f"r = {correlat[ilat,ilon]:.2f}\n\n"    
-
-            #             r"$\bf{Forecast}$" + "\n" +
-            #             r"$\bf{Probabilities\ (p)}$" + "\n"
-            #             f"P<(T1={terc_inf_val:.1f}) = {p_below_inf:.0f}%\n"
-            #             f"P<(T2={terc_sup_val:.1f}) = {p_below_sup:.0f}%"
-            #         )
-
-            #         ax.text(
-            #             0.98, 0.8, text_right,
-            #             transform=ax.transAxes,
-            #             fontsize=9,
-            #             va='top',
-            #             ha='right'
-            #         )
+                    ax.text(
+                        0.98, 0.8, text_right,
+                        transform=ax.transAxes,
+                        fontsize=9,
+                        va='top',
+                        ha='right'
+                    )
 
             plt.tight_layout()
             if ano == 2025:
@@ -799,8 +765,8 @@ for ano in anos:
     
     if ano == 2025:
         pontos = pontos_2025
-        path_gamma = "/dados/mmclima/multimodelo/sazonal/posproc/nmme/v1/forecast/gamma/multimodel/2025/2025020100"
-        path_regr= "/dados/mmclima/multimodelo/sazonal/posproc/nmme/v1/forecast/regr/multimodel/2025/2025020100"
+        path_gamma = "/dados/mmclima/multimodelo/seasonal/posproc/nmme/v1/forecast/gamma/multimodel/2025/2025020100"
+        path_regr= "/dados/mmclima/multimodelo/seasonal/posproc/nmme/v1/forecast/regr/multimodel/2025/2025020100"
 
         arq_fcst_alpha = f"{path_gamma}/fcst_prec_alphafcst_seas01_multimodel_calibrated_gamma_2025020100.nc"
         arq_fcst_beta  = f"{path_gamma}/fcst_prec_betafcst_seas01_multimodel_calibrated_gamma_2025020100.nc"
@@ -824,8 +790,8 @@ for ano in anos:
 
     elif ano == 2016:
         pontos = pontos_2016
-        path_gamma = "/dados/mmclima/multimodelo/sazonal/posproc/nmme/v1/forecast/gamma/multimodel/2016/2016020100"
-        path_regr= "/dados/mmclima/multimodelo/sazonal/posproc/nmme/v1/forecast/regr/multimodel/2016/2016020100"
+        path_gamma = "/dados/mmclima/multimodelo/seasonal/posproc/nmme/v1/forecast/gamma/multimodel/2016/2016020100"
+        path_regr= "/dados/mmclima/multimodelo/seasonal/posproc/nmme/v1/forecast/regr/multimodel/2016/2016020100"
 
         arq_fcst_alpha = f"{path_gamma}/fcst_prec_alphafcst_seas01_multimodel_calibrated_gamma_2016020100.nc"
         arq_fcst_beta  = f"{path_gamma}/fcst_prec_betafcst_seas01_multimodel_calibrated_gamma_2016020100.nc"
@@ -948,10 +914,10 @@ for ano in anos:
                 label_obs = "Obs. MAM 2025"
             else:
                 if curvetype == "cdf":                
-                    plt.title(f"c) Precip. Fcst. Calibrated Multi-Model (Gamma) \nfor MAM 2016 issued: Feb 2025 Lat:{lat_str} Lon:{lon_str}", 
+                    plt.title(f"c) Precip. Fcst. Calibrated Multi-Model (Gamma) \nfor MAM 2016 issued: Feb 2016 Lat:{lat_str} Lon:{lon_str}", 
                             fontsize=12, fontweight='bold')
                 elif curvetype == "exc":
-                    plt.title(f"d) Precip. Fcst. Calibrated Multi-Model (Gamma) \nfor MAM 2016 issued: Feb 2025 Lat:{lat_str} Lon:{lon_str}", 
+                    plt.title(f"d) Precip. Fcst. Calibrated Multi-Model (Gamma) \nfor MAM 2016 issued: Feb 2016 Lat:{lat_str} Lon:{lon_str}", 
                             fontsize=12, fontweight='bold')   
 
 
@@ -1048,92 +1014,57 @@ for ano in anos:
             for spine in ax.spines.values():
                 spine.set_linewidth(1.5)            
 
-            # if curvetype == "cdf":
+            if curvetype == "cdf":
 
-            #         # # ===== LEFT (estatísticas) =====
-            #         # text_left = (
-            #         #     r"$\bf{Forecast\ (x)}$" + "\n"
-            #         #     f"stdvₓ = {fcst_std[ilat,ilon]:.1f}mm\n"
-            #         #     f"meanₓ = {fcst_mean[ilat,ilon]:.1f}mm\n\n"
-            #         #     r"$\bf{Observation\ (y)}$" + "\n"
-            #         #     f"stdvᵧ = {obs_std[ilat,ilon]:.1f}mm\n"
-            #         #     f"meanᵧ = {obs_mean[ilat,ilon]:.1f}mm\n\n"
-            #         #     f"anomaly = {fcst_mean[ilat,ilon] - obs_mean[ilat,ilon]:.1f}mm\n"
-            #         #     f"r = {correlat[ilat,ilon]:.2f}"
-            #         # )
+                    # ===== RIGHT (probabilidades) =====
+                    text_right = (
+                        r"$\bf{Forecast\ (x)}$" + "\n"
+                        f"stdvₓ = {fcst_std[ilat,ilon]:.1f}mm\n"
+                        f"meanₓ = {fcst_mean[ilat,ilon]:.1f}mm\n\n"
+                        r"$\bf{Observation\ (y)}$" + "\n"
+                        f"stdvᵧ = {obs_std[ilat,ilon]:.1f}mm\n"
+                        f"meanᵧ = {obs_mean[ilat,ilon]:.1f}mm\n\n"
+                        f"anomaly = {fcst_mean[ilat,ilon] - obs_mean[ilat,ilon]:.1f}mm\n"
+                        f"r = {correlat[ilat,ilon]:.2f}\n\n"                    
+                        r"$\bf{Forecast}$" + "\n" +
+                        r"$\bf{Probabilities\ (p)}$" + "\n"
+                        f"P<(T1={terc_inf_val:.1f}) = {p_below_inf*100:.0f}%\n"
+                        f"P<(T2={terc_sup_val:.1f}) = {p_below_sup*100:.0f}%"
+                    )
 
-            #         # ax.text(
-            #         #     0.02, 0.7, text_left,
-            #         #     transform=ax.transAxes,
-            #         #     fontsize=8,
-            #         #     va='top'
-            #         # )
+                    ax.text(
+                        0.98, 0.8, text_right,
+                        transform=ax.transAxes,
+                        fontsize=9,
+                        va='top',
+                        ha='right'
+                    )
 
-            #         # ===== RIGHT (probabilidades) =====
-            #         text_right = (
-            #             r"$\bf{Forecast\ (x)}$" + "\n"
-            #             f"stdvₓ = {fcst_std[ilat,ilon]:.1f}mm\n"
-            #             f"meanₓ = {fcst_mean[ilat,ilon]:.1f}mm\n\n"
-            #             r"$\bf{Observation\ (y)}$" + "\n"
-            #             f"stdvᵧ = {obs_std[ilat,ilon]:.1f}mm\n"
-            #             f"meanᵧ = {obs_mean[ilat,ilon]:.1f}mm\n\n"
-            #             f"anomaly = {fcst_mean[ilat,ilon] - obs_mean[ilat,ilon]:.1f}mm\n"
-            #             f"r = {correlat[ilat,ilon]:.2f}\n\n"                    
-            #             r"$\bf{Forecast}$" + "\n" +
-            #             r"$\bf{Probabilities\ (p)}$" + "\n"
-            #             f"P<(T1={terc_inf_val:.1f}) = {p_below_inf*100:.0f}%\n"
-            #             f"P<(T2={terc_sup_val:.1f}) = {p_below_sup*100:.0f}%"
-            #         )
+            else:  # ===== EXC =====
 
-            #         ax.text(
-            #             0.98, 0.8, text_right,
-            #             transform=ax.transAxes,
-            #             fontsize=9,
-            #             va='top',
-            #             ha='right'
-            #         )
+                    # ===== RIGHT (estatísticas) =====
+                    text_right = (
+                        r"$\bf{Forecast\ (x)}$" + "\n"
+                        f"stdvₓ = {fcst_std[ilat,ilon]:.1f}mm\n"
+                        f"meanₓ = {fcst_mean[ilat,ilon]:.1f}mm\n\n"
+                        r"$\bf{Observation\ (y)}$" + "\n"
+                        f"stdvᵧ = {obs_std[ilat,ilon]:.1f}mm\n"
+                        f"meanᵧ = {obs_mean[ilat,ilon]:.1f}mm\n\n"
+                        f"anomaly = {fcst_mean[ilat,ilon] - obs_mean[ilat,ilon]:.1f}mm\n"
+                        f"r = {correlat[ilat,ilon]:.2f}\n\n"                    
+                        r"$\bf{Forecast}$" + "\n" +
+                        r"$\bf{Probabilities\ (p)}$" + "\n"
+                        f"P>(T1={terc_inf_val:.1f}) = {p_above_inf*100:.0f}%\n"
+                        f"P>(T2={terc_sup_val:.1f}) = {p_above_sup*100:.0f}%"
+                    )
 
-            # else:  # ===== EXC =====
-
-            #         # # ===== LEFT (probabilidades) =====
-            #         # text_left = (
-                        
-            #         #     r"$\bf{Forecast}$" + "\n" +
-            #         #     r"$\bf{Probabilities\ (p)}$" + "\n"
-            #         #     f"P>(T1={terc_inf_val:.1f}) = {p_above_inf*100:.0f}%\n"
-            #         #     f"P>(T2={terc_sup_val:.1f}) = {p_above_sup*100:.0f}%"
-            #         # )
-
-            #         # ax.text(
-            #         #     0.02, 0.7, text_left,
-            #         #     transform=ax.transAxes,
-            #         #     fontsize=8,
-            #         #     va='top'
-            #         # )
-
-            #         # ===== RIGHT (estatísticas) =====
-            #         text_right = (
-            #             r"$\bf{Forecast\ (x)}$" + "\n"
-            #             f"stdvₓ = {fcst_std[ilat,ilon]:.1f}mm\n"
-            #             f"meanₓ = {fcst_mean[ilat,ilon]:.1f}mm\n\n"
-            #             r"$\bf{Observation\ (y)}$" + "\n"
-            #             f"stdvᵧ = {obs_std[ilat,ilon]:.1f}mm\n"
-            #             f"meanᵧ = {obs_mean[ilat,ilon]:.1f}mm\n\n"
-            #             f"anomaly = {fcst_mean[ilat,ilon] - obs_mean[ilat,ilon]:.1f}mm\n"
-            #             f"r = {correlat[ilat,ilon]:.2f}\n\n"                    
-            #             r"$\bf{Forecast}$" + "\n" +
-            #             r"$\bf{Probabilities\ (p)}$" + "\n"
-            #             f"P<(T1={terc_inf_val:.1f}) = {p_below_inf*100:.0f}%\n"
-            #             f"P<(T2={terc_sup_val:.1f}) = {p_below_sup*100:.0f}%"
-            #         )
-
-            #         ax.text(
-            #             0.98, 0.8, text_right,
-            #             transform=ax.transAxes,
-            #             fontsize=9,
-            #             va='top',
-            #             ha='right'
-            #         )
+                    ax.text(
+                        0.98, 0.8, text_right,
+                        transform=ax.transAxes,
+                        fontsize=9,
+                        va='top',
+                        ha='right'
+                    )
 
             plt.tight_layout()
             if ano == 2025:
@@ -1141,92 +1072,3 @@ for ano in anos:
             else:
                 plt.savefig(f"{outdir}/curve_{curvetype}_gamma_2016020100_{nome}.png", dpi=150)    
             plt.close()
-
-    # for curvetype in curves_type:
-    #     for nome, (ilat, ilon) in pontos.items():
-    #         #EMPIRICA OBS
-    #         obs_series = obs_total[:, ilat, ilon].values
-    #         obs_series = obs_series[~np.isnan(obs_series)]
-    #         obs_sorted = np.sort(obs_series)
-    #         n = len(obs_sorted)
-    #         # Probabilidade empírica acumulada (CDF)
-    #         cdf_emp = np.arange(1, n+1) / (n+1)
-    #         # Probabilidade de excedência
-    #         exc_emp = 1 - cdf_emp
-
-    #         lat_real = lat_obs[ilat]
-    #         lon_real = lon360_to_180(lon_obs[ilon])   
-    #         lat_str, lon_str = format_coord(lat_real, lon_real)
-
-    #         # eixo x
-    #         x = np.linspace(
-    #             0.1,
-    #             np.max(obs_total[:, ilat, ilon].values),
-    #             500
-    #         )
-
-    #         # parâmetros Gamma
-    #         a_obs  = obs_alpha[ilat, ilon]
-    #         b_obs  = obs_beta[ilat, ilon]
-
-    #         a_fcst = fcst_alpha[ilat, ilon]
-    #         b_fcst = fcst_beta[ilat, ilon]
-
-    #         # Curvas Gamma (excedência)
-    #         if curvetype == "cdf":
-    #             y_obs_gamma  = gamma.cdf(x, a=a_obs,  scale=b_obs)
-    #             y_fcst_gamma = gamma.cdf(x, a=a_fcst, scale=b_fcst)
-    #         else:
-    #             y_obs_gamma  = 1 - gamma.cdf(x, a=a_obs,  scale=b_obs)
-    #             y_fcst_gamma = 1 - gamma.cdf(x, a=a_fcst, scale=b_fcst)
-
-    #         plt.figure(figsize=(6, 6))
-
-
-    #         if curvetype == "exc":
-    #             plt.plot(x, y_fcst_gamma, color="blue", linewidth=2,
-    #                     label="Forecast EDF")
-    #             plt.step(obs_sorted, exc_emp,
-    #                     color="red",
-    #                     linewidth=2,
-    #                     where="post",
-    #                     label="Climatological EDF")
-
-    #         else:
-    #             plt.plot(x, y_fcst_gamma, color="blue", linewidth=2,
-    #                     label="Forecast CDF")                
-    #             plt.step(obs_sorted, cdf_emp,
-    #                     color="red",
-    #                     linewidth=2,
-    #                     where="post",
-    #                     label="Climatological CDF")
-
-    #         plt.plot(x, y_obs_gamma, color="red",  linewidth=2, linestyle="--",
-    #                 label="Gamma Fit")
-
-    #         if ano == 2025:
-    #             plt.title(f"Precip. fcst. (Gamma) for MAM 2025 issued: Feb 2025, Lat:{lat_str} Lon:{lon_str}", 
-    #                     fontsize=9, fontweight='bold')
-    #         else:
-    #             plt.title(f"Precip. fcst. (Gamma) for MAM 2025 issued: Feb 2025, Lat:{lat_str} Lon:{lon_str}", 
-    #                     fontsize=9, fontweight='bold')
-
-    #         plt.xlabel("Precipitation (mm)",fontsize=9)
-
-    #         if curvetype == "cdf":
-    #             plt.ylabel("Cumulative Probability",fontsize=9)
-    #         else:
-    #             plt.ylabel("Exceedance Probability",fontsize=9)     
-
-    #         plt.ylim(-0.05, 1.05)
-    #         plt.grid(False)
-
-    #         if curvetype == "cdf":
-    #             plt.legend(loc='upper left', fontsize=7)
-    #         else:
-    #             plt.legend(loc='upper right', fontsize=9)
-
-    #         plt.tight_layout()
-    #         if ano == 2025:
-    #             plt.savefig(f"{outdir}/curve_{curvetype}_gamma_2025020100_{nome}.png", dpi=150)
-    #         plt.close()

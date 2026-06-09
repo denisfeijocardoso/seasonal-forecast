@@ -2,8 +2,8 @@ import xarray as xr
 import netCDF4
 import calendar
 import os
-from src.config.config_models_seasonal import ConfigModelos
-from src.config.config_dir_seasonal import path_hcst, path_fcst, path_obs
+from src.config.config_models import ConfigModelos
+from src.config.config_path import path_hcst, path_fcst, path_obs
 
 
 def interp_echam():
@@ -14,41 +14,42 @@ def interp_echam():
     lat_new = obs["lat"] #resolução 2.5° 
     lon_new = obs["lon"] #resolução 2.5° 
 
-    #Abrir arquivo ECHAM
-    file_echam = path_hcst + "/echam46/pcp-seasonacc-echam46-hind9120-fev_MAM_1p0.nc"
+    #Abrir arquivo ECHAM 
+    file_echam = path_fcst + "/echam46/pcp-seasonacc-echam46-hind9120-fev2025_2025MAM_1p0.nc"
     data_echam = xr.open_dataset(file_echam, decode_times=False)
     anos = range(1991,2021)
 
-    for t, ano in enumerate(anos):
-        da_t = data_echam.isel(time=t)
-        file_out = f"{path_hcst}/echam46/{anos[t]}/prec_seasonaly_echam46_hcst_MAM_{anos[t]}.nc"
-        file_interp = f"{path_hcst}/echam46/{anos[t]}/prec_seasonaly_echam46_hcst_interp_MAM_{anos[t]}.nc"
-        da_t.to_netcdf(file_out)
-        print(f"Salvo: {file_out}")
+    #for t, ano in enumerate(anos):
+    da_t = data_echam
+    file_out = f"{path_fcst}/echam46/prec_seasonaly_echam46_hcst_MAM_2025.nc"
+    file_interp = f"{path_fcst}/echam46/prec_seasonaly_echam46_hcst_interp_MAM_2025.nc"
+    da_t.to_netcdf(file_out)
+    print(f"Salvo: {file_out}")
 
-        #Interpolação
-        if os.path.exists(file_interp):
-            print(f"Arquivo já interpolado: {file_interp} — pulando.")
-            continue
+    #Interpolação
+    if os.path.exists(file_interp):
+        print(f"Arquivo já interpolado: {file_interp} — pulando.")
+#continue
 
-        try:
-            # Tenta abrir o arquivo
-            hcst = xr.open_dataset(file_out, decode_times=False)
-            
-            ds_interp = hcst.interp(lat=lat_new, lon=lon_new, method="linear")  
-                    
-            # Salva o arquivo interpolado
-            ds_interp.to_netcdf(file_interp)
-            print(f"Arquivo interpolado: {file_interp}")
-            hcst.close()
+    try:
+        # Tenta abrir o arquivo
+        hcst = xr.open_dataset(file_out, decode_times=False)
+        
+        ds_interp = hcst.interp(lat=lat_new, lon=lon_new, method="linear")  
+                
+        # Salva o arquivo interpolado
+        ds_interp.to_netcdf(file_interp)
+        print(f"Arquivo interpolado: {file_interp}")
+        hcst.close()
 
-        except FileNotFoundError:
-            # Caso o arquivo não exista, imprime a mensagem e continua o loop
-            print(f"O arquivo {file_hcst} não foi baixado...")
-            continue  # Continua para o próximo mês/ano/modelo        
+    except FileNotFoundError:
+        # Caso o arquivo não exista, imprime a mensagem e continua o loop
+        print(f"O arquivo {file_hcst} não foi baixado...")
 
-# interp_echam()
-# quit()
+#    continue  # Continua para o próximo mês/ano/modelo        
+
+interp_echam()
+quit()
 
 def interp_hcst(base, month):
     # Abrir o arquivo NetCDF da observação (referencia para interpolar)

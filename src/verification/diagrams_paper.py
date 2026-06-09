@@ -4,7 +4,7 @@ import xarray as xr
 import matplotlib.pyplot as plt
 import datetime
 import calendar
-from src.config.config_models_sazonal import ConfigModelos
+from src.config.config_models import ConfigModelos
 from sklearn.metrics import roc_auc_score, roc_curve
 from sklearn.calibration import calibration_curve
 import matplotlib.patches as patches
@@ -141,7 +141,7 @@ def extract_region(var, lat_idx, lon_idx):
 bases = ["nmme"]  # ou ["nmme",""]
 calibs = ["regr","gamma","cox"]# ou ["regr","cox"]
 periods_list = ["seas01"] #[f"mnth0{i}" for i in range(5)] + [f"seas0{i}" for i in range(3)]
-data_verifs_nmme = ["20250201"]
+data_verifs_nmme = ["20260201"]
 data_verifs_copernicus = ["20250801", "20250901", "20251001", "20251101","20251201"]
 models_nmme = ["multimodel"]#,"multimodel","canesm5","ccsm4", "cesm1", "cfsv2", "gem52nemo", "geos5v2", "spear", "bam12"]
 varis = ["prec"] 
@@ -189,29 +189,29 @@ for base in bases:
                             periods_dict = generate_months_periods(data_verif)
                             # Nomes dos arquivos
                             if calib == "nocalib":
-                                binobstsup_file = f"{var}_binobstsup_{period}_{name_model}_{calib}_{data_verif}.nc"
-                                binobstinf_file = f"{var}_binobstinf_{period}_{name_model}_{calib}_{data_verif}.nc"
-                                #binobsmed_file  = f"{var}_binobsmed_{period}_{name_model}_{calib}_{data_verif}.nc"
+                                binobstsup_file = f"{var}_binobstsup_{period}_{name_model}_{calib}_{data_verif}00.nc"
+                                binobstinf_file = f"{var}_binobstinf_{period}_{name_model}_{calib}_{data_verif}00.nc"
+                                #binobsmed_file  = f"{var}_binobsmed_{period}_{name_model}_{calib}_{data_verif}00.nc"
 
-                                probtsup_file = f"{var}_probtsup_{period}_{name_model}_{calib}_{data_verif}.nc"
-                                probtinf_file = f"{var}_probtinf_{period}_{name_model}_{calib}_{data_verif}.nc"
-                                #probmed_file  = f"{var}_probmed_{period}_{name_model}_{calib}_{data_verif}.nc"
+                                probtsup_file = f"{var}_probtsup_{period}_{name_model}_{calib}_{data_verif}00.nc"
+                                probtinf_file = f"{var}_probtinf_{period}_{name_model}_{calib}_{data_verif}00.nc"
+                                #probmed_file  = f"{var}_probmed_{period}_{name_model}_{calib}_{data_verif}00.nc"
                             else:
-                                binobstsup_file = f"{var}_binobstsup_{period}_{name_model}_calibrated_{calib}_{data_verif}.nc"
-                                binobstinf_file = f"{var}_binobstinf_{period}_{name_model}_calibrated_{calib}_{data_verif}.nc"
-                                binobsmed_file  = f"{var}_bionbsmean_{period}_{name_model}_calibrated_{calib}_{data_verif}.nc"
+                                binobstsup_file = f"{var}_binobstsup_{period}_{name_model}_calibrated_{calib}_{data_verif}00.nc"
+                                binobstinf_file = f"{var}_binobstinf_{period}_{name_model}_calibrated_{calib}_{data_verif}00.nc"
+                                binobsmed_file  = f"{var}_bionbsmean_{period}_{name_model}_calibrated_{calib}_{data_verif}00.nc"
 
-                                probtsup_file = f"{var}_probtsup_{period}_{name_model}_calibrated_{calib}_{data_verif}.nc"
-                                probtinf_file = f"{var}_probtinf_{period}_{name_model}_calibrated_{calib}_{data_verif}.nc"
-                                probmed_file  = f"{var}_probmean_{period}_{name_model}_calibrated_{calib}_{data_verif}.nc"
+                                probtsup_file = f"{var}_probtsup_{period}_{name_model}_calibrated_{calib}_{data_verif}00.nc"
+                                probtinf_file = f"{var}_probtinf_{period}_{name_model}_calibrated_{calib}_{data_verif}00.nc"
+                                probmed_file  = f"{var}_probmean_{period}_{name_model}_calibrated_{calib}_{data_verif}00.nc"
 
                             # Caminho dos dados
                             if base == "nmme":
                                 path_data = f"/dados/mmclima/multimodelo/artigo/dados/"
-                                pathfig = f"/dados/mmclima/multimodelo/sazonal/figures/artigo/"
+                                pathfig = f"/dados/mmclima/multimodelo/seasonal/figures/artigo/"
                             else: 
                                 path_data = f"/dados/mmclima/multimodelo/artigo/dados/"
-                                pathfig = f"/dados/mmclima/multimodelo/sazonal/figures/artigo/"
+                                pathfig = f"/dados/mmclima/multimodelo/seasonal/figures/artigo/"
 
                             os.makedirs(pathfig, exist_ok=True)
 

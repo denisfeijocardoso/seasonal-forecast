@@ -6,21 +6,16 @@ import scipy.stats as stats
 import netCDF4 as nc
 import calendar
 import time
-import multiprocessing as mp
-from pathlib import Path
-from datetime import date, datetime,timedelta
 from dateutil.relativedelta import *
 from src.verification.hcst_verif_seasonal import Hindcast
 from src.verification.obs_verif_seasonal import Observation
-from src.config.config_models_seasonal import ConfigModelos
+from src.config.config_models import ConfigModelos
 from scipy.stats import gamma, norm
 from scipy.stats.stats import pearsonr
 from scipy.stats import mannwhitneyu
 from joblib import Parallel, delayed
 from lifelines import CoxPHFitter
-from scipy.interpolate import PchipInterpolator
 from sklearn.metrics import roc_auc_score
-import matplotlib.pyplot as plt
 
 
 
@@ -136,7 +131,7 @@ class Calibration:
         x_alvo : float
             Valor de X para o qual se quer estimar a probabilidade.
         alongar : bool, opcional
-            Se True, adiciona limites [mín, máx] à curva para garantir cobertura total.
+            Se True, adiciona limites [min, máx] à curva para garantir cobertura total.
         inverter : bool, opcional
             Se True, usa 1 - prob (para converter de curva de sobrevivência → CDF).
         verbose : bool, opcional
@@ -389,19 +384,16 @@ class Calibration:
         anom = {k: v['anomaly'] for k, v in statistcs.items() if 'anomaly' in v}
         std = {k: v['std'] for k, v in statistcs.items() if 'std' in v}
         mean = {k: v['mean'] for k, v in statistcs.items() if 'mean' in v} 
-        mediana =  {k: v['mediana'] for k, v in statistcs.items() if 'mediana' in v}   
         tercil_inf = {k: v['tercilinf'] for k, v in statistcs.items() if 'tercilinf' in v}    
         tercil_sup = {k: v['tercilsup'] for k, v in statistcs.items() if 'tercilsup' in v}   
         total = {k: v['total'] for k, v in statistcs.items() if 'total' in v}   
 
         #transformar em array
         ordered_periods = list(anom.keys()) 
-        obs_series = np.stack([obs.calculate_obs_periods(base, month_fcst, var)[p] for p in ordered_periods], axis=0)
         obs_total = np.stack([total[p] for p in ordered_periods], axis=1)
         obs_anomaly = np.stack([anom[p] for p in ordered_periods], axis=1)
         obs_std = np.stack([std[p] for p in ordered_periods], axis=1)
-        obs_mean = np.stack([mean[p] for p in ordered_periods], axis=1)
-        obs_mediana = np.stack([mediana[p] for p in ordered_periods], axis=1)        
+        obs_mean = np.stack([mean[p] for p in ordered_periods], axis=1)     
         obs_tercinf = np.stack([tercil_inf[p] for p in ordered_periods], axis=1)
         obs_tercsup = np.stack([tercil_sup[p] for p in ordered_periods], axis=1)             
         
@@ -841,19 +833,18 @@ class Calibration:
         probexc_tercinf = np.full(shape, np.nan, np.float32)
         probexc_tercsup = np.full(shape, np.nan, np.float32)
 
-        total_jobs = len(years) * 8 * 72 * 144
         #print(f"Iniciando {total_jobs:,} pontos com {mp.cpu_count()} CPUs disponíveis...")
         print("cox regression: ", month_fcst)
         print("model: ", model, "var: ", var)
 
         # --- Execução paralela ---
-        results = Parallel(n_jobs=13, batch_size='auto', backend="loky", verbose=0)(
+        results = Parallel(n_jobs=10, batch_size='auto', backend="loky", verbose=1)(
             delayed(Calibration.process_point_wrapper)(
                 base, ano, period, clat, clon,
                 hcst_anomaly, obs_series,
                 obs_tercinf, obs_tercsup, obs_mediana
             )
-            for ano in range(len(years))
+            for ano in range(len(years)) 
             for period in range(8)
             for clat in range(72)
             for clon in range(144)
@@ -883,56 +874,6 @@ class Calibration:
         return (obs_anomaly, obs_total, anomalia_fcst_cox, mediana_fcst_cox, 
                 probbelow_mediana, prob_below_inf, prob_above_sup,
                 binobsmediana, binobsinf, binobssup)
-
-    # @staticmethod
-    # def nocalibration_model(base, month_fcst, model, var, year_fcst, path_fcst, path_hcst):
-
-    #     def process_year(i, hcst_total):
-    #         print(f"Processando ano {i}", flush=True)
-    #         n_members = hcst_total.shape[2]
-
-    #         # Exclui o ano i
-    #         data_excl_i = np.delete(hcst_total, i, axis=0)
-    #         anos = data_excl_i.shape[0]
-
-    #         # Cálculo tercis e média
-    #         tercinf = np.nanpercentile(data_excl_i, 33.33, axis=(0, 2))
-    #         tercsup = np.nanpercentile(data_excl_i, 66.66, axis=(0, 2))
-    #         mediahcst = np.nanmean(data_excl_i, axis=(0, 2))
-
-    #         # Seleciona o ano retirado (validação cruzada)
-    #         hcst = hcst_total[i, ...]  # shape (8,20,72,144)
-
-    #         # Máscaras booleanas
-    #         below_mask = hcst <= tercinf[:, None, :, :]
-    #         above_mask = hcst >= tercsup[:, None, :, :]
-    #         below_mean_mask = hcst <= mediahcst[:, None, :, :]
-
-    #         # Cálculo das probabilidades 
-    #         prob_below_i = np.sum(below_mask, axis=1) / n_members
-    #         prob_above_i = np.sum(above_mask, axis=1) / n_members
-    #         prob_below_mean_i = np.sum(below_mean_mask, axis=1) / n_members
-            
-    #         return prob_below_i, prob_above_i, prob_below_mean_i
-
-    #     hindcast = Hindcast(path_fcst, path_hcst) 
-    #     hcst = hindcast.climatology_model_hcst_members(base, month_fcst, model, var)
-
-    #     hcst_total_members = hindcast.dict_to_array_members(base, hcst, 
-    #                         ["mnth00","mnth01","mnth02","mnth03","mnth04","seas00","seas01","seas02"]
-    #                         ,var,model)      
-
-    #     n_years = hcst_total_members.shape[0]
-
-    #     results = Parallel(n_jobs=3, backend="loky", verbose=0)(
-    #         delayed(process_year)(i, hcst_total_members) for i in range(n_years))
-
-    #     #Reconstrói resultados
-    #     prob_below_inf = np.stack([r[0] for r in results], axis=0)
-    #     prob_above_sup = np.stack([r[1] for r in results], axis=0)
-    #     prob_below_mean = np.stack([r[2] for r in results], axis=0)
-
-    #     return (prob_below_inf, prob_above_sup, prob_below_mean)
 
     @staticmethod
     def nocalibration_model(base, month_fcst, model, var, year_fcst, path_fcst, path_hcst):
@@ -1586,94 +1527,108 @@ class Calibration:
 #                         binobsmed, binobsinf, binobssup, auroc_below_mean, auroc_below_inf, auroc_above_sup,
 #                         msss_skill, msss_fase, msss_amplitude, bias)
 
-#########
-# ARTIGO#
-#########
-#     for var in varis:
-#         for type_calibration in type_calibrations:
-#             for model in models:
-#                 for month_fcst in months:
-#                     print(type_calibration)
-#                     print(month_fcst)  
-#                     print(model)
-#                     print(var)
-#                     if type_calibration == "regr": 
-#                         #Gera a previsão calibrada (método da Regressão)
-#                         (obs_anomaly, obs_total, fcst_calib_anomaly, fcst_calib_mean, prob_below_mean, prob_below_inf, 
-#                         prob_above_sup, binobsmed, binobsinf, binobssup) = Calibration.regression_calibration_model(path_fcst, path_hcst, path_obs, base, year_fcst, month_fcst, model, var)
+# #########
+# # ARTIGO#
+# #########
 
-#                         #Area sob a curva ROC
-#                         auroc_below_inf, _, sig_aroctinf = Calibration.area_roc_with_pvalue(binobsinf, prob_below_inf)
-#                         auroc_above_sup, _, sig_aroctsup = Calibration.area_roc_with_pvalue(binobssup, prob_above_sup)
+# path_hcst = "/dados/mmclima/multimodelo/seasonal/hindcast"
+# path_fcst = "/dados/mmclima/multimodelo/seasonal/forecast"
+# path_obs = "/dados/mmclima/multimodelo/seasonal/obs"
 
-#                         #ROC Skill Score
-#                         rocss_below_inf = 2 * auroc_below_inf - 1
-#                         rocss_above_sup = 2 * auroc_above_sup - 1
+# inicio = time.time()  # <<< Início da contagem
 
-#                         #Correlação
-#                         cor_total_verif, _, sig_cortotal = Calibration.corr_verif_with_pvalue(obs_anomaly, fcst_calib_anomaly)
+# base = "nmme"
+# models_nmme = ["multimodel"]#
+# varis = ["prec"]#"prec","t2mt"
+# type_calibrations = ["cox"]#"regr","gamma","nocalib","cox"
+# months = [2]
+# year_fcst = 2026
 
-#                         Calibration.write_netcdf_model_artigo(base, year_fcst, month_fcst, model, var, 
-#                         type_calibration, cor_total_verif, sig_cortotal, prob_below_mean, prob_below_inf, prob_above_sup, binobsinf, binobssup, binobsmed, 
-#                         auroc_below_inf, auroc_above_sup, sig_aroctinf, sig_aroctsup)                       
+# for var in varis:
+#     for type_calibration in type_calibrations:
+#         for model in models_nmme:
+#             for month_fcst in months:
+#                 print(type_calibration)
+#                 print(month_fcst)  
+#                 print(model)
+#                 print(var)
+#                 if type_calibration == "regr": 
+#                     #Gera a previsão calibrada (método da Regressão)
+#                     (obs_anomaly, obs_total, fcst_calib_anomaly, fcst_calib_mean, prob_below_mean, prob_below_inf, 
+#                     prob_above_sup, binobsmed, binobsinf, binobssup) = Calibration.regression_calibration_model(path_fcst, path_hcst, path_obs, base, year_fcst, month_fcst, model, var)
 
-#                     elif type_calibration == "cox":
-#                         #Gera a previsão calibrada (método COX)
-#                         (obs_anomaly, obs_total, mediana_fcst_cox, anomalia_fcst_cox, prob_below_mediana, prob_below_inf, 
-#                         prob_above_sup, binobsmediana, binobsinf, binobssup) = Calibration.calibration_cox_model(path_fcst, path_hcst, path_obs, base, year_fcst, month_fcst, model, var)
+#                     #Area sob a curva ROC
+#                     auroc_below_inf, _, sig_aroctinf = Calibration.area_roc_with_pvalue(binobsinf, prob_below_inf)
+#                     auroc_above_sup, _, sig_aroctsup = Calibration.area_roc_with_pvalue(binobssup, prob_above_sup)
 
-#                         #Area sob a curva ROC
-#                         auroc_below_inf, _, sig_aroctinf = Calibration.area_roc_with_pvalue(binobsinf, prob_below_inf)
-#                         auroc_above_sup, _, sig_aroctsup = Calibration.area_roc_with_pvalue(binobssup, prob_above_sup)
+#                     #ROC Skill Score
+#                     rocss_below_inf = 2 * auroc_below_inf - 1
+#                     rocss_above_sup = 2 * auroc_above_sup - 1
 
-#                         #ROC Skill Score
-#                         rocss_below_inf = 2 * auroc_below_inf - 1
-#                         rocss_above_sup = 2 * auroc_above_sup - 1
+#                     #Correlação
+#                     cor_total_verif, _, sig_cortotal = Calibration.corr_verif_with_pvalue(obs_anomaly, fcst_calib_anomaly)
 
-#                         #Correlação
-#                         cor_total_verif, _, sig_cortotal = Calibration.corr_verif_with_pvalue(obs_anomaly, anomalia_fcst_cox)
+#                     Calibration.write_netcdf_model_artigo(base, year_fcst, month_fcst, model, var, 
+#                     type_calibration, cor_total_verif, sig_cortotal, prob_below_mean, prob_below_inf, prob_above_sup, binobsinf, binobssup, binobsmed, 
+#                     auroc_below_inf, auroc_above_sup, sig_aroctinf, sig_aroctsup)                       
 
-#                         Calibration.write_netcdf_model_artigo(base, year_fcst, month_fcst, model, var, 
-#                         type_calibration, cor_total_verif, sig_cortotal, prob_below_mediana, prob_below_inf, prob_above_sup, binobsinf, binobssup, binobsmediana, 
-#                         auroc_below_inf, auroc_above_sup, sig_aroctinf, sig_aroctsup)        
+#                 elif type_calibration == "cox":
+#                     #Gera a previsão calibrada (método COX)
+#                     (obs_anomaly, obs_total, mediana_fcst_cox, anomalia_fcst_cox, prob_below_mediana, prob_below_inf, 
+#                     prob_above_sup, binobsmediana, binobsinf, binobssup) = Calibration.calibration_cox_model(path_fcst, path_hcst, path_obs, base, year_fcst, month_fcst, model, var)
 
-#                     if type_calibration == "gamma":
-#                         (obs_total, obs_anomaly, fcst_calib_anomaly, fcst_calib_mean, fcst_alpha, fcst_beta, prob_below_inf, 
-#                         prob_above_sup, prob_below_mean, binobsinf, binobssup, binobsmed) = Calibration.gamma_calibration_model(path_fcst, path_hcst, path_obs, base, year_fcst, month_fcst, model, var)
+#                     #Area sob a curva ROC
+#                     auroc_below_inf, _, sig_aroctinf = Calibration.area_roc_with_pvalue(binobsinf, prob_below_inf)
+#                     auroc_above_sup, _, sig_aroctsup = Calibration.area_roc_with_pvalue(binobssup, prob_above_sup)
 
-#                         #Area sob a curva ROC
-#                         auroc_below_inf, _, sig_aroctinf = Calibration.area_roc_with_pvalue(binobsinf, prob_below_inf)
-#                         auroc_above_sup, _, sig_aroctsup = Calibration.area_roc_with_pvalue(binobssup, prob_above_sup)
+#                     #ROC Skill Score
+#                     rocss_below_inf = 2 * auroc_below_inf - 1
+#                     rocss_above_sup = 2 * auroc_above_sup - 1
 
-#                         #ROC Skill Score
-#                         rocss_below_inf = 2 * auroc_below_inf - 1
-#                         rocss_above_sup = 2 * auroc_above_sup - 1
+#                     #Correlação
+#                     cor_total_verif, _, sig_cortotal = Calibration.corr_verif_with_pvalue(obs_anomaly, anomalia_fcst_cox)
 
-#                         #Correlação
-#                         cor_total_verif, _, sig_cortotal = Calibration.corr_verif_with_pvalue(obs_anomaly, fcst_calib_anomaly)
+#                     Calibration.write_netcdf_model_artigo(base, year_fcst, month_fcst, model, var, 
+#                     type_calibration, cor_total_verif, sig_cortotal, prob_below_mediana, prob_below_inf, prob_above_sup, binobsinf, binobssup, binobsmediana, 
+#                     auroc_below_inf, auroc_above_sup, sig_aroctinf, sig_aroctsup)        
 
-#                         Calibration.write_netcdf_model_artigo(base, year_fcst, month_fcst, model, var, 
-#                         type_calibration, cor_total_verif, sig_cortotal, prob_below_mean, prob_below_inf, prob_above_sup, binobsinf, binobssup, binobsmed, 
-#                         auroc_below_inf, auroc_above_sup, sig_aroctinf, sig_aroctsup)       
+#                 if type_calibration == "gamma":
+#                     (obs_total, obs_anomaly, fcst_calib_anomaly, fcst_calib_mean, fcst_alpha, fcst_beta, prob_below_inf, 
+#                     prob_above_sup, prob_below_mean, binobsinf, binobssup, binobsmed) = Calibration.gamma_calibration_model(path_fcst, path_hcst, path_obs, base, year_fcst, month_fcst, model, var)
 
-#                     if type_calibration == "nocalib":
-#                         obs = Observation(path_obs)
-#                         statistcs = obs.mean_std_anom_obs_gamma(base, month_fcst, var)   
-#                         total = {k: v['total'] for k, v in statistcs.items() if 'total' in v}   
-#                         anom = {k: v['anomaly'] for k, v in statistcs.items() if 'anomaly' in v}
-#                         mean = {k: v['mean'] for k, v in statistcs.items() if 'mean' in v} 
-#                         #transformar em array
-#                         ordered_periods = list(anom.keys()) 
-#                         obs_total = np.stack([total[p] for p in ordered_periods], axis=1)
-#                         obs_mean = np.stack([mean[p] for p in ordered_periods], axis=1)
-#                         obs_anomaly = np.stack([anom[p] for p in ordered_periods], axis=1)                        
-#                         #
-#                         hindcast = Hindcast(path_fcst, path_hcst)
-#                         hcst_total, hcst_mean, hcst_std, hcst_var, hcst_anomaly = hindcast.mean_std_anom_hindcast_gamma(base, year_fcst, month_fcst, model, var)     
-#                         cor_total_verif, _, sig_cortotal = Calibration.corr_verif_with_pvalue(obs_anomaly, hcst_anomaly)
+#                     #Area sob a curva ROC
+#                     auroc_below_inf, _, sig_aroctinf = Calibration.area_roc_with_pvalue(binobsinf, prob_below_inf)
+#                     auroc_above_sup, _, sig_aroctsup = Calibration.area_roc_with_pvalue(binobssup, prob_above_sup)
 
-#                         Calibration.write_netcdf_model_artigo(base, year_fcst, month_fcst, model, var, 
-#                         type_calibration, cor_total_verif, sig_cortotal)  
+#                     #ROC Skill Score
+#                     rocss_below_inf = 2 * auroc_below_inf - 1
+#                     rocss_above_sup = 2 * auroc_above_sup - 1
+
+#                     #Correlação
+#                     cor_total_verif, _, sig_cortotal = Calibration.corr_verif_with_pvalue(obs_anomaly, fcst_calib_anomaly)
+
+#                     Calibration.write_netcdf_model_artigo(base, year_fcst, month_fcst, model, var, 
+#                     type_calibration, cor_total_verif, sig_cortotal, prob_below_mean, prob_below_inf, prob_above_sup, binobsinf, binobssup, binobsmed, 
+#                     auroc_below_inf, auroc_above_sup, sig_aroctinf, sig_aroctsup)       
+
+#                 if type_calibration == "nocalib":
+#                     obs = Observation(path_obs)
+#                     statistcs = obs.mean_std_anom_obs_gamma(base, month_fcst, var)   
+#                     total = {k: v['total'] for k, v in statistcs.items() if 'total' in v}   
+#                     anom = {k: v['anomaly'] for k, v in statistcs.items() if 'anomaly' in v}
+#                     mean = {k: v['mean'] for k, v in statistcs.items() if 'mean' in v} 
+#                     #transformar em array
+#                     ordered_periods = list(anom.keys()) 
+#                     obs_total = np.stack([total[p] for p in ordered_periods], axis=1)
+#                     obs_mean = np.stack([mean[p] for p in ordered_periods], axis=1)
+#                     obs_anomaly = np.stack([anom[p] for p in ordered_periods], axis=1)                        
+#                     #
+#                     hindcast = Hindcast(path_fcst, path_hcst)
+#                     hcst_total, hcst_mean, hcst_std, hcst_var, hcst_anomaly = hindcast.mean_std_anom_hindcast_gamma(base, year_fcst, month_fcst, model, var)     
+#                     cor_total_verif, _, sig_cortotal = Calibration.corr_verif_with_pvalue(obs_anomaly, hcst_anomaly)
+
+#                     Calibration.write_netcdf_model_artigo(base, year_fcst, month_fcst, model, var, 
+#                     type_calibration, cor_total_verif, sig_cortotal)  
 
 
 # fim = time.time()  # <<< Fim da contagem

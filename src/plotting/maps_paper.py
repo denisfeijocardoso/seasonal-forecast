@@ -153,7 +153,7 @@ def plot_map(cor, sig, lons, lats, lead, month, prod, calib, region):
         # Ajustar longitude quebrada
         lons, cor, sig = fix_wrapping(lons, cor, sig)
 
-    output_dir = "/dados/mmclima/multimodelo/sazonal/figures/artigo"
+    output_dir = "/dados/mmclima/multimodelo/seasonal/figures/artigo/echam"
     os.makedirs(output_dir, exist_ok=True) 
 
     # ===================================================
@@ -240,7 +240,7 @@ def plot_map(cor, sig, lons, lats, lead, month, prod, calib, region):
         )
 
         # ===== Estados do Brasil =====
-        shp_estados = "/scripts/clima/denis/sazonal/src/maps/BR_UF_2022/BR_UF_2022.shp"
+        shp_estados = "/scripts/clima/denis/seasonal/src/maps/shapes/BR_UF_2022.shp"
 
         reader = shpreader.Reader(shp_estados)
 
@@ -464,14 +464,14 @@ def plot_map(cor, sig, lons, lats, lead, month, prod, calib, region):
 
         elif calib == "cox":
             title_txt = (
-                "c) ROC Area: Calibrated Multi-Model: GPCP (1991–2020)\n"
+                "e) ROC Area: Calibrated Multi-Model: GPCP (1991–2020)\n"
                 "Event: precip. in lower tercile (below normal): Cox\n"
                 "Issued: Feb  Valid for MAM"
             )
 
         elif calib == "gamma":
             title_txt = (
-                "e) ROC Area: Calibrated Multi-Model: GPCP (1991–2020)\n"
+                "c) ROC Area: Calibrated Multi-Model: GPCP (1991–2020)\n"
                 "Event: precip. in lower tercile (below normal): Gamma\n"
                 "Issued: Feb  Valid for MAM"
             )
@@ -486,14 +486,14 @@ def plot_map(cor, sig, lons, lats, lead, month, prod, calib, region):
 
         elif calib == "cox":
             title_txt = (
-                "d) ROC Area: Calibrated Multi-Model: GPCP (1991–2020)\n"
+                "f) ROC Area: Calibrated Multi-Model: GPCP (1991–2020)\n"
                 "Event: precip. in upper tercile (above normal): Cox\n"
                 "Issued: Feb  Valid for MAM"
             )
 
         elif calib == "gamma":
             title_txt = (
-                "f) ROC Area: Calibrated Multi-Model: GPCP (1991–2020)\n"
+                "d) ROC Area: Calibrated Multi-Model: GPCP (1991–2020)\n"
                 "Event: precip. in upper tercile (above normal): Gamma\n"
                 "Issued: Feb  Valid for MAM"
             )
@@ -553,19 +553,19 @@ for calib in calibrations:
 
         if product == "corskill":
             ds_cor = xr.open_dataset(
-                f"{input_dir}/prec_corskill_{lead}_multimodel_calibrated_{calib}_2025{month_str}01.nc"
+                f"{input_dir}/prec_corskill_{lead}_multimodel_calibrated_{calib}_2026{month_str}0100.nc"
             )
             cor = ds_cor["corskill"]
 
         elif product == "rocsstinf":
             ds_cor = xr.open_dataset(
-                f"{input_dir}/prec_rocsstinf_{lead}_multimodel_calibrated_{calib}_2025{month_str}01.nc"
+                f"{input_dir}/prec_rocsstinf_{lead}_multimodel_calibrated_{calib}_2026{month_str}0100.nc"
             )
             cor = ds_cor["rocsstinf"]
 
         elif product == "rocsstsup":
             ds_cor = xr.open_dataset(
-                f"{input_dir}/prec_rocsstsup_{lead}_multimodel_calibrated_{calib}_2025{month_str}01.nc"
+                f"{input_dir}/prec_rocsstsup_{lead}_multimodel_calibrated_{calib}_2026{month_str}0100.nc"
             )
             cor = ds_cor["rocsstsup"]
 
@@ -609,19 +609,19 @@ for calib in calibrations:
 
         if product == "corskill":
             ds_sig = xr.open_dataset(
-                f"{input_dir}/prec_sigcorskill_{lead}_multimodel_calibrated_{calib}_2025{month_str}01.nc"
+                f"{input_dir}/prec_sigcorskill_{lead}_multimodel_calibrated_{calib}_2026{month_str}0100.nc"
             )
             sig = ds_sig["sigcorskill"]
 
         elif product == "sigaroctinf":
             ds_sig = xr.open_dataset(
-                f"{input_dir}/prec_sigaroctinf_{lead}_multimodel_calibrated_{calib}_2025{month_str}01.nc"
+                f"{input_dir}/prec_sigaroctinf_{lead}_multimodel_calibrated_{calib}_2026{month_str}0100.nc"
             )
             sig = ds_sig["sigaroctinf"]
 
         elif product == "sigaroctsup":
             ds_sig = xr.open_dataset(
-                f"{input_dir}/prec_sigaroctsup_{lead}_multimodel_calibrated_{calib}_2025{month_str}01.nc"
+                f"{input_dir}/prec_sigaroctsup_{lead}_multimodel_calibrated_{calib}_2026{month_str}0100.nc"
             )
             sig = ds_sig["sigaroctsup"]
 

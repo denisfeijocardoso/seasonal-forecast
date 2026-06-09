@@ -8,7 +8,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 from scipy.stats import norm
 from tqdm import tqdm
-from src.config.config_models_seasonal import ConfigModelos
+from src.config.config_models import ConfigModelos
 from multiprocessing import Pool, cpu_count
 
 

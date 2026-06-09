@@ -31,27 +31,28 @@ class Observation:
         '''Lê os arquivos das observações para todos os anos da climatologia + meses à frente'''
         climatology = self.climatology_obs(base, month_obs)
         obs_data = defaultdict(dict)  # Mês -> {Ano -> DataArray}
+ 
         for month, year in climatology:
             ndays = calendar.monthrange(year, month)[1]
-            month_name = calendar.month_abbr[month].capitalize()
-            month_num = f"{month:02d}"
-            if var == "prec": 
-                file_name_obs = f"{self.path_obs}/gpcp/{year}/obs_gpcp_prec_mon_mean_{year}{month_num}01.nc"
-                var_name = "precip"
-            elif var == "t2mt":
-                file_name_obs = f"{self.path_obs}/era5/obs_era5_t2mt_monthly_interp_{year}{month_num}01.nc"
-                var_name = "t2m"
-            
+
+            file_name_obs = (
+                self.path_obs /
+                "gpcp" /
+                str(year) /
+                f"obs_gpcp_{var}_mon_mean_{year}{month:02d}01.nc"
+            )
+        
             ds = xr.open_dataset(file_name_obs, decode_timedelta=True)
+            var_name = list(ds.data_vars())[0]
             data = ds[var_name].squeeze()
 
             if var == "prec":
-                #data = data.where(data >= 0)
                 data = data * ndays
             elif var == "t2mt":
                 data = data - 273.15
 
-            obs_data[month][year] = data  # agora é um dicionário dentro de outro
+            obs_data[month][year] = data 
+
             ds.close()
 
         return obs_data

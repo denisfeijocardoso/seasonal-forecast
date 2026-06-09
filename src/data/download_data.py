@@ -10,8 +10,8 @@ import datetime
 from pathlib import Path
 import cftime 
 import cdsapi
-from src.config.config_models_seasonal import ConfigModelos
-from src.config.config_dir_seasonal import path_hcst, path_fcst, path_obs
+from src.config.config_models import ConfigModelos
+from src.config.config_path import path_hcst, path_fcst, path_obs
 
 # URL base
 base_url_obs = "https://www.ncei.noaa.gov/data/global-precipitation-climatology-project-gpcp-daily/access/"
@@ -23,25 +23,25 @@ url_cmap = "https://psl.noaa.gov/thredds/fileServer/Datasets/cmap/std/precip.mon
 #OBSERVATION#
 #############
 
-# def download_monthly_obs(url):
-#     homedir = Path.home()
-#     output_path = homedir/"work/projects/seasonal/data/obs"
-#     try:
-#         # Envia uma solicitação HTTP GET para a URL
-#         response = requests.get(url_gpcp, stream=True)
-#         # Verifica se a solicitação foi bem-sucedida (status 200)
-#         if response.status_code == 200:
-#             # Abre o arquivo no modo de escrita binária e grava os dados do arquivo
-#             with open(output_path, 'wb') as file:
-#                 for chunk in response.iter_content(chunk_size=8192):  # Lê em pedaços de 8KB
-#                     file.write(chunk)
-#             print(f"Arquivo baixado com sucesso! Salvo em: {output_path}")
-#             url.split("/")[5]
-#             os.rename(f"{output_path}/precip.mon.mean.{url.split("/")[5]}nc")
-#         else:
-#             print(f"Falha ao baixar o arquivo. Status Code: {response.status_code}")
-#     except Exception as e:
-#         print(f"Erro ao tentar baixar o arquivo: {e}")
+def download_monthly_obs(url):
+    homedir = Path.home()
+    output_path = homedir/"work/projects/seasonal/data/obs"
+    try:
+        # Envia uma solicitação HTTP GET para a URL
+        response = requests.get(url_gpcp, stream=True)
+        # Verifica se a solicitação foi bem-sucedida (status 200)
+        if response.status_code == 200:
+            # Abre o arquivo no modo de escrita binária e grava os dados do arquivo
+            with open(output_path, 'wb') as file:
+                for chunk in response.iter_content(chunk_size=8192):  # Lê em pedaços de 8KB
+                    file.write(chunk)
+            print(f"Arquivo baixado com sucesso! Salvo em: {output_path}")
+            url.split("/")[5]
+            os.rename(f"{output_path}/precip.mon.mean.{url.split("/")[5]}nc")
+        else:
+            print(f"Falha ao baixar o arquivo. Status Code: {response.status_code}")
+    except Exception as e:
+        print(f"Erro ao tentar baixar o arquivo: {e}")
 
 def transform_and_split_time_obs(file, output_dir):
     #Mudar a coordenada do tempo no NetCDF das observações para a unidade "ano-mes-dia-hora"
@@ -82,11 +82,10 @@ file = "obs_gpcp_pr_mon_mean_1979-2025.nc"
 
 output_dir = "/dados/mmclima/multimodelo/seasonal/obs"
 
+
 ###########
 #HINDCASTS#
 ###########
-
-#https://forecast.ccsr.columbia.edu/NMME/COLA-RSMAS/CCSM4/prec.icechunk
 
 def download_hcstfile_nmme(init_year, end_year, model, var):
     periods = pd.date_range(start=f"{init_year}-01-01", end=f"{end_year}-12-31", freq='ME')
@@ -194,18 +193,6 @@ def download_hcstfile_copernicus(init_year, end_year, init_month, end_month, mod
 
         output_file = f"{year_dir}/{var_name_file}_monthly_{name_model_dir}_hcst_{str(year_hcst)}{month_hcst}01.nc"  
 
-        # # Nome do arquivo de saída
-        # if model == "ukmo":
-        #     output_file = f"{year_dir}/{var_name_file}_monthly_ukmos6v{system_type}_hcst_{year_hcst}{month_hcst}01.nc"  
-        # elif model == "ecmwf":
-        #     output_file = f"{year_dir}/{var_name_file}_monthly_{model}s5_hcst_{year_hcst}{month_hcst}01.nc"  
-        # elif model == "meteo_france":
-        #     output_file = f"{year_dir}/{var_name_file}_monthly_mfs{system_type}_hcst_{year_hcst}{month_hcst}01.nc"   
-        # elif model in ["eccc4", "eccc5"]:
-        #     output_file = f"{year_dir}/{var_name_file}_monthly_ecccs{system_type}_hcst_{year_hcst}{month_hcst}01.nc"
-        # else:
-        #     output_file = f"{year_dir}/{var_name_file}_monthly_{model}s{system_type}_hcst_{year_hcst}{month_hcst}01.nc"
-
         # Baixa o arquivo
         if os.path.exists(output_file):
             print(f"Arquivo já existe, pulando o download: {output_file}")
@@ -221,6 +208,7 @@ def download_hcstfile_copernicus(init_year, end_year, init_month, end_month, mod
 ##########
 #REALTIME#
 ##########
+
 
 def download_realtime_nmme(year, month_num, model, var):
     monthstr = calendar.month_abbr[month_num].capitalize()  # Ex: 4 → 'Apr' 
@@ -316,18 +304,6 @@ def download_realtime_copernicus(year, month_num, model, var):
 
     # Nome do arquivo de saída
     output_file = f"{year_dir}/{var_name_file}_monthly_{name_model_dir}_fcst_{year}{month_fcst}01.nc"  
-
-    # # Nome do arquivo de saída
-    # if model == "ukmo":
-    #     output_file = f"{year_dir}/{var_name_file}_monthly_ukmos6v{system_type}_fcst_{year}{month_fcst}01.nc"  
-    # elif model == "ecmwf":
-    #     output_file = f"{year_dir}/{var_name_file}_monthly_{model}s5_fcst_{year}{month_fcst}01.nc"  
-    # elif model == "meteo_france":
-    #     output_file = f"{year_dir}/{var_name_file}_monthly_mfs{system_type}_fcst_{year}{month_fcst}01.nc"   
-    # elif model in ["eccc4", "eccc5"]:
-    #     output_file = f"{year_dir}/{var_name_file}_monthly_ecccs{system_type}_fcst_{year}{month_fcst}01.nc"
-    # else:
-    #     output_file = f"{year_dir}/{var_name_file}_monthly_{model}s{system_type}_fcst_{year}{month_fcst}01.nc"
 
     # Baixa o arquivo
     if os.path.exists(output_file):

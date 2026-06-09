@@ -4,7 +4,7 @@ import xarray as xr
 import matplotlib.pyplot as plt
 import datetime
 import calendar
-from src.config.config_models_seasonal import ConfigModelos
+from src.config.config_models import ConfigModelos
 from sklearn.metrics import roc_auc_score, roc_curve
 from sklearn.calibration import calibration_curve
 import matplotlib.patches as patches

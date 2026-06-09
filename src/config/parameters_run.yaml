@@ -1,0 +1,30 @@
+bases:
+  nmme:
+    climatology:
+      start_year: 1991
+      end_year: 2020
+
+  copernicus:
+    climatology:
+      start_year: 1993
+      end_year: 2016
+
+variables:
+  - prec
+  - t2mt
+
+calibrations:
+  - regr
+  - cox
+  - nocalib
+
+periods:
+  mnth00: [0, 1]
+  mnth01: [1, 2]
+  mnth02: [2, 3]
+  mnth03: [3, 4]
+  mnth04: [4, 5]
+
+  seas00: [0, 3]
+  seas01: [1, 4]
+  seas02: [2, 5]

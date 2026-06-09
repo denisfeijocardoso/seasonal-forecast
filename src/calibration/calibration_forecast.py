@@ -5,23 +5,18 @@ import xarray as xr
 import scipy.stats as stats
 import netCDF4 as nc
 import calendar
-import time
 from scipy.stats import kstest
-from pathlib import Path
 from datetime import date, datetime,timedelta
 from dateutil.relativedelta import *
 from src.forecast.forecast_seasonal import Forecast
 from src.hindcast.hindcast_seasonal import Hindcast
 from src.observation.observation_seasonal import Observation
-from src.config.config_models_seasonal import ConfigModelos
-from src.config.config_dir_seasonal import path_hcst, path_fcst, path_obs
+from src.config.config_models import ConfigModelos
+from src.config.config_path import path_hcst, path_fcst, path_obs
 from scipy.stats import gamma, norm
 from scipy.stats import pearsonr 
 from joblib import Parallel, delayed
 from lifelines import CoxPHFitter
-from scipy.interpolate import PchipInterpolator
-import matplotlib.pyplot as plt
-from scipy.stats import norm
 
 ##################################################
 #CLASSE COM A FUNÇÃO PARA CALCULAR AS CALIBRAÇÕES#
@@ -43,183 +38,7 @@ class Calibration:
         xarray.DataArray: Mapa de correlação (period, lat, lon),
         onde period multimodelo é 'week01','week02', 'week03', 'week04', 'fort01', 'fort02', '3wks01', 'mnth01', 'ds4401'
     """
-    @staticmethod  
-    def is_all_nan(file_path):
-        import xarray as xr
 
-        try:
-            with xr.open_dataset(file_path, decode_times=False)  as ds:
-
-                # pega o nome da variável automaticamente
-                var_name = list(ds.data_vars)[0]
-
-                data = ds[var_name]
-
-                return not data.notnull().any().compute().item()
-
-        except Exception as e:
-            print(f"Erro em {file_path}: {e}")
-            return True
-
-    @staticmethod  
-    def check_models(base, path_fcst, year_fcst, month_fcst, var):
-        '''Checa quais modelos têm arquivos disponíveis para uma data e variável'''
-        month = f"{month_fcst:02d}"
-        month_name = calendar.month_abbr[month_fcst].capitalize() 
-        fcst_dir = Path(path_fcst)
-
-        if base == "copernicus":
-            models = ["ecmwf", "ukmo","meteo_france","dwd","cmcc","ncep","jma","eccc4","eccc5","bom","bam12"]
-        elif base == "nmme":
-            models = ["canesm5", "ccsm4","cesm1", "cfsv2", "gem52nemo", "spear", "geos5v2", "bam12"]
-
-        models_available = []
-
-        for mdl in models: 
-            name_model_dir = mdl if base == "nmme" else ConfigModelos.get_model_dir_c3s(mdl)
-            file_path = fcst_dir / base / name_model_dir / str(year_fcst) / f"{var}_monthly_{name_model_dir}_fcst_interp_{year_fcst}{month}01.nc"
-            if file_path.exists() and file_path.stat().st_size > 2000:
-
-                if not Calibration.is_all_nan(file_path): #checa se o arquivo está todo cheio de NaN         
-                    models_available.append(mdl)
-
-        return models_available 
-
-    @staticmethod   
-    def correlation_model(obs_anomaly, hcst_anomaly, year_fcst, month_fcst, model, var):
-        ''' Cálculo da correlação entre anomalia dos hindcasts e observações '''
-
-        model_cor = np.full((hcst_anomaly.shape[1], 72, 144), np.nan) 
-
-        for p in range (hcst_anomaly.shape[1]):
-            for i in range(72):
-                for j in range(144):
-                    obs_anom_point = obs_anomaly[:, p, i, j]
-                    hind_anom_point = hcst_anomaly[:, p, i, j]
-                    # Máscara de valores válidos (não-NaN em ambas séries)
-                    valid_mask = ~np.isnan(obs_anom_point) & ~np.isnan(hind_anom_point)
-
-                    if valid_mask.sum() > 1:  # Só calcula correlação se houver dados suficientes
-                        model_cor[p, i, j] = pearsonr(
-                            hind_anom_point[valid_mask],
-                            obs_anom_point[valid_mask]
-                        )[0]
-        model_cor[model_cor < 0] = 0
-        #
-        return model_cor
-
-    @staticmethod 
-    def interpolation_cox(vetorx, prob, y_alvo, alongar=True, inverter=True, verbose=False):
-        """
-        Alonga e interpola uma curva (varx_clim, curva) para encontrar o valor de x correspondente a y_alvo.
-        """
-        try:
-            curva_proc = 1 - prob if inverter else prob
-            times_proc = vetorx
-
-            if alongar:
-                if inverter:
-                    # Estamos usando CDF (P[T ≤ t]), então extremos são 0 → 1
-                    curva_proc = np.concatenate(([0], curva_proc, [1]))
-                else:
-                    # Estamos usando curva de sobrevivência (P[T > t]), então extremos são 1 → 0
-                    curva_proc = np.concatenate(([1], curva_proc, [0]))
-                
-                times_proc = np.concatenate(([np.min(vetorx)], vetorx, [np.max(vetorx)]))
-                #times_proc = np.concatenate(([0], vetorx, [np.max(vetorx)]))
-
-            for i in range(len(curva_proc) - 1):
-                y1, y2 = curva_proc[i], curva_proc[i + 1]
-                x1, x2 = times_proc[i], times_proc[i + 1]
-
-                if (y1 - y_alvo) * (y2 - y_alvo) <= 0 and y1 != y2:
-                    x_interp = x1 + (y_alvo - y1) * ((x2 - x1) / (y2 - y1))
-                    return float(x_interp)
-
-            if verbose:
-                print(" Valor y_alvo fora do intervalo da curva.")
-            return None
-
-        except Exception as e:
-            if verbose:
-                print(f"[Erro na interpolação]: {e}")
-            return None
-
-    @staticmethod  
-    def probabilidade_cox(vetorx, prob, x_alvo, alongar=True, inverter=True, verbose=False):
-        """
-        Encontra o valor da probabilidade (y) dado um valor de X (x_alvo),
-        interpolando a curva (vetorx, prob).
-
-        Parâmetros:
-        ------------
-        vetorx : array-like
-            Eixo X da curva (ex: valores de precipitação ou temperatura).
-        prob : array-like
-            Eixo Y da curva (ex: probabilidades cumulativas ou de sobrevivência).
-        x_alvo : float
-            Valor de X para o qual se quer estimar a probabilidade.
-        alongar : bool, opcional
-            Se True, adiciona limites [mín, máx] à curva para garantir cobertura total.
-        inverter : bool, opcional
-            Se True, usa 1 - prob (para converter de curva de sobrevivência → CDF).
-        verbose : bool, opcional
-            Se True, exibe mensagens em caso de erro ou extrapolação.
-
-        Retorna:
-        --------
-        float ou None
-            Valor interpolado da probabilidade correspondente a x_alvo.
-        """
-        try:
-            # Garantir arrays NumPy
-            vetorx = np.asarray(vetorx, dtype=float)
-            prob = np.asarray(prob, dtype=float)
-
-            # Ordenar vetorx (caso não esteja)
-            order = np.argsort(vetorx)
-            vetorx = vetorx[order]
-            prob = prob[order]
-
-            # Inversão, se necessário
-            curva_proc = 1 - prob if inverter else prob
-            times_proc = vetorx
-
-            # Alongamento controlado
-            if alongar:
-                xmin, xmax = np.min(times_proc), np.max(times_proc)
-
-                if inverter:
-                    # Curva tipo CDF (0 → 1)
-                    curva_proc = np.concatenate(([0], curva_proc, [1]))
-                else:
-                    # Curva de sobrevivência (1 → 0)
-                    curva_proc = np.concatenate(([1], curva_proc, [0]))
-
-                # Adiciona bordas ligeiramente fora do domínio
-                delta = 0.01 * abs(xmax - xmin)
-                times_proc = np.concatenate(([xmin - delta], vetorx, [xmax + delta]))
-
-            # Clampar o alvo dentro dos limites
-            x_alvo = np.clip(x_alvo, np.min(times_proc), np.max(times_proc))
-
-            # Interpolação linear
-            for i in range(len(times_proc) - 1):
-                x1, x2 = times_proc[i], times_proc[i + 1]
-                y1, y2 = curva_proc[i], curva_proc[i + 1]
-
-                if (x1 - x_alvo) * (x2 - x_alvo) <= 0 and x1 != x2:
-                    y_interp = y1 + (x_alvo - x1) * ((y2 - y1) / (x2 - x1))
-                    return float(np.clip(y_interp, 0, 1))  # restringe entre 0 e 1
-
-            if verbose:
-                print(f"Valor x_alvo={x_alvo} fora do intervalo da curva [{times_proc[0]}, {times_proc[-1]}].")
-            return None
-
-        except Exception as e:
-            if verbose:
-                print(f"[Erro na interpolação]: {e}")
-            return None
 
     @staticmethod  
     def regression_calibration_model(path_fcst, path_hcst, path_obs, base, year_fcst, month_fcst, model, var):
@@ -532,10 +351,6 @@ class Calibration:
     @staticmethod
     def ks_gamma_bootstrap(sample, B=1000, n_jobs=6):
 
-        import numpy as np
-        from scipy.stats import gamma, kstest
-        from joblib import Parallel, delayed
-
         # --- Limpeza
         sample = sample[~np.isnan(sample)]
         sample = sample[sample > 0]
@@ -653,7 +468,7 @@ class Calibration:
         # --- Calcular o p-value do teste Kolmogorov-Smirnov (KS)
         ntime, nmonth, nlat, nlon = obs_total.shape
 
-        p_obs = np.full((nmonth, nlat, nlon), np.nan)
+        #p_obs = np.full((nmonth, nlat, nlon), np.nan)
         p_hcst = np.full((nmonth, nlat, nlon), np.nan)
 
         print("obs serie:",obs_total[:, 6,30, 55])
@@ -663,24 +478,81 @@ class Calibration:
         print("shape hcst:", alpha_hcst[6,30, 55])
         print("scale hcst:", beta_hcst[6,30, 55])
 
+
+        def processar_gridpoint(m, i, j,
+                                obs_total,
+                                hcst_total):
+
+            resultado_obs = np.nan
+            resultado_hcst = np.nan
+
+            serie_obs = obs_total[:, m, i, j]
+            serie_hcst = hcst_total[:, m, i, j]
+
+            # OBS
+            if np.sum(~np.isnan(serie_obs)) > 10:
+
+                _, p = Calibration.ks_gamma_bootstrap(
+                    serie_obs,
+                    B=1000
+                )
+
+                resultado_obs = p
+
+            # HCST
+            if np.sum(~np.isnan(serie_hcst)) > 10:
+
+                _, p = Calibration.ks_gamma_bootstrap(
+                    serie_hcst,
+                    B=1000
+                )
+
+                resultado_hcst = p
+
+            return m, i, j, resultado_obs, resultado_hcst
+
+        tarefas = [
+            (m, i, j)
+            for m in range(nmonth)
+            for i in range(nlat)
+            for j in range(nlon)
+        ]
+
+        resultados =  Parallel(
+            n_jobs = -1,
+            verbose = 10
+        )(
+            delayed(processar_gridpoint)(
+                m,i,j,
+                obs_total,
+                hcst_total
+            )
+            for m, i, j in tarefas
+        )
+
+        for m, i, j, p_obs_val, p_hcst_val in resultados:
+
+            #p_obs[m, i, j] = p_obs_val
+            p_hcst[m, i, j] = p_hcst_val
+
         for m in range(nmonth):
             for i in range(nlat):
                 for j in range(nlon):
 
-                    serie_obs = obs_total[:, m, i, j]
+                    # serie_obs = obs_total[:, m, i, j]
                     serie_hcst = hcst_total[:, m, i, j]
 
-                    if np.sum(~np.isnan(serie_obs)) > 10:
+                    # if np.sum(~np.isnan(serie_obs)) > 10:
 
-                        # D, p = kstest(
-                        #     serie_obs,
-                        #     'gamma',
-                        #     args=(alpha_obs[m,i,j], 0, beta_obs[m,i,j])
-                        # )
+                    #     # D, p = kstest(
+                    #     #     serie_obs,
+                    #     #     'gamma',
+                    #     #     args=(alpha_obs[m,i,j], 0, beta_obs[m,i,j])
+                    #     # )
 
-                        D, p = Calibration.ks_gamma_bootstrap(serie_obs, B=1000)                   
+                    #     D, p = Calibration.ks_gamma_bootstrap(serie_obs, B=1000)                   
 
-                        p_obs[m,i,j] = p
+                    #     p_obs[m,i,j] = p
 
                     if np.sum(~np.isnan(serie_hcst)) > 10:
 
@@ -813,9 +685,10 @@ class Calibration:
         prob_tercile[max_idx == 0] = -max_val[max_idx == 0]  # below → negativo
         prob_tercile[max_idx == 2] =  max_val[max_idx == 2]  # above → positivo
 
+
         return (anomalia2, media2, desvio2, alpha2, beta2, prob_below_inf, prob_above_inf, 
                 prob_below_sup, prob_above_sup, prob_central_terc, prob_tercile*100, corr, alpha_obs,
-                beta_obs, p_hcst, p_obs)
+                beta_obs, p_hcst)
 
         #return (anomalia2, media2, alpha2, beta2, prob_tercile*100) 
 
@@ -1503,7 +1376,7 @@ class Calibration:
     @staticmethod                    
     def write_netcdf_gamma(base, year_fcst, month_fcst, model, variable,
     anom_calib, acum_calib, stdev_calib, alpha_fcst, beta_fcst, prob_below_inf, prob_above_inf,
-    prob_below_sup, prob_above_sup, prob_central_terc, prob_tercile, corr, alpha_obs, beta_obs, p_hcst, p_obs):
+    prob_below_sup, prob_above_sup, prob_central_terc, prob_tercile, corr, alpha_obs, beta_obs, p_hcst):#, p_hcst, p_obs):
 
         """Escreve arquivos NetCDF para previsão calibrada pelo método da regressão, compatíveis com o GrADS."""
         period_dates = Calibration.compute_period_names(year_fcst, month_fcst) 
@@ -1516,7 +1389,7 @@ class Calibration:
 
         if variable == "prec":
             varis = ["anom", "acum", "stdfcst", "alphafcst", "betafcst", "ptercinfbelow", "ptercinfabove", 
-            "ptercsupbelow", "ptercsupabove", "pcentral", "terc", "corr", "alphaobs", "betaobs", "pkshcst", "pksobs"]
+            "ptercsupbelow", "ptercsupabove", "pcentral", "terc", "corr", "alphaobs", "betaobs", "pkshcst"]#, "pkshcst", "pksobs"]
 
         elif variable == "t2mt":
             varis = ["anom", "prob", "acum", "terc"]
@@ -1586,9 +1459,9 @@ class Calibration:
                         "ptercsupabove": prob_above_sup[period, ...],    
                         "pcentral": prob_central_terc[period, ...],   
                         "terc": prob_tercile[period, ...],     
-                        "corr": corr[period, ...],   
-                        "pkshcst": p_hcst[period,...], 
-                        "pksobs": p_obs[period,...]                                                                                                                                             
+                        "corr": corr[period, ...],
+                        "pkshcst": p_hcst[period,...]
+                        # "pksobs": p_obs[period,...]                                                                                                                                             
                     }
 
                     elif variable == "t2mt":
@@ -1609,3 +1482,102 @@ class Calibration:
                     ds.description = f"Forecast {var_name} calibrated by regression - period {name_period}"
                     ds.history = f"Issued: {period_dates['mnth00'].upper()} For: {forecast_date.upper()}"
                     ds.source = f"{model} calibrated forecast - COX"
+
+
+model = "multimodel"
+base = "nmme"
+var = "prec"
+month_fcst = 2
+year_fcst = 2025
+calibrations = ["gamma"]
+# ['canesm5', 'ccsm4', 'cesm1', 'cfsv2', 'gem52nemo', 'spear', 'geos5v2', 'bam12', 'echam46']
+for calib in calibrations:
+
+    version_multimodel = ConfigModelos.get_multimodel_version(base)
+
+    # Define o nome do diretório dos modelos
+    if base == "nmme":
+        name_model_dir = model
+    elif base == "copernicus":
+        if model == "multimodel":
+            name_model_dir = "multimodel"
+        else:
+            name_model_dir = ConfigModelos.get_model_dir_c3s(model)   
+
+
+    # # FAZ CHECAGEM SE OS ARQUIVOS DAS PREVISÕES CALIBRADAS FORAM GERADOS
+    # if model != "multimodel": #o multimodelo sempre vai processar (no caso de atualizar modelo)
+    #     pattern = os.path.join(path_fcst_nc, f"fcst_{var}_*.nc")
+    #     files = glob.glob(pattern)
+
+    #     if files:
+    #         print(f"[SKIP] {model.upper()} ({var.upper()}) ({calib.upper()}) já processado")
+    #         continue
+
+    print(f"\n[RUN] {base.upper()} - {model.upper()} ({var.upper()}) ({calib.upper()})")                
+
+    print(f"\nGerando os arquivos NetCDF das Previsões Sazonais calibradas para: {model.upper()} - {calib.upper()} - {var.upper()}")
+    
+    if calib == "regr":
+        if var == "prec":
+
+            (anom_nocalib, anom_calib, acum_calib, std_calib, prob_above_calib, prob_tercile, 
+            prob_exc_mm, prec_percent, obs_mean, obs_std, obs_total, obs_tercinf, obs_tercsup, 
+            prob_below_tercinf, prob_above_tercinf, prob_below_tercsup, prob_above_tercsup, 
+            prob_central_terc, model_cor) = Calibration.regression_calibration_model(path_fcst, path_hcst, path_obs, base, year_fcst, month_fcst, model, var)
+            
+            Calibration.write_netcdf_model_nocalibrated(base, year_fcst, month_fcst, model, var, anom_nocalib)
+
+            Calibration.write_netcdf_model_regression(base, year_fcst, month_fcst, model, 
+            var, anom_calib, acum_calib, std_calib, prob_above_calib, prob_tercile, 
+            obs_mean, obs_std, obs_total, obs_tercinf, obs_tercsup, prob_below_tercinf, 
+            prob_above_tercinf, prob_below_tercsup, prob_above_tercsup, 
+            prob_central_terc, model_cor, prob_exc_mm, prec_percent)
+
+        elif var == "t2mt":
+            (anom_nocalib, anom_calib, acum_calib, std_calib, prob_above_calib,  
+            prob_tercile, obs_mean, obs_std, obs_total, obs_tercinf, obs_tercsup, 
+            prob_below_tercinf, prob_above_tercinf, prob_below_tercsup, prob_above_tercsup, 
+            prob_central_terc, model_cor) = Calibration.regression_calibration_model(path_fcst, path_hcst, path_obs, base, year_fcst, month_fcst, model, var)
+            
+            Calibration.write_netcdf_model_regression(base, year_fcst, month_fcst, model, 
+            var, anom_calib, acum_calib, std_calib, prob_above_calib, prob_tercile, 
+            obs_mean, obs_std, obs_total, obs_tercinf, obs_tercsup, prob_below_tercinf, 
+            prob_above_tercinf, prob_below_tercsup, prob_above_tercsup, 
+            prob_central_terc, model_cor)
+
+            #Escreve o arquivo
+            Calibration.write_netcdf_model_nocalibrated(base, year_fcst, month_fcst, model, var, anom_nocalib)
+
+    elif calib == "cox":
+        if var == "prec":
+            (anom_calib, mediana_calib, prob_above_calib,
+            prob_tercile, prob_exc_mm, prec_percent, prob_below_inf, prob_above_inf,
+            prob_below_sup, prob_above_sup, probyobs_cox, probyfcst_cox, varx_cox, coef_beta, 
+            cox_iqr, obs_mediana, obs_iqr) = Calibration.calibration_cox_model(path_fcst, path_hcst, path_obs, base, year_fcst, month_fcst, model, var)
+
+            Calibration.write_netcdf_model_cox(base, year_fcst, month_fcst, model, var, 
+            anom_calib, mediana_calib, prob_above_calib, prob_tercile, prob_below_inf, 
+            prob_above_inf,  prob_below_sup, prob_above_sup, probyobs_cox, probyfcst_cox, 
+            varx_cox, coef_beta, cox_iqr, obs_mediana, obs_iqr, prob_exc_mm, prec_percent)
+
+        elif var == "t2mt":
+            (anom_calib, mediana_calib, prob_above_calib,
+            prob_tercile, prob_below_inf, prob_above_inf,
+            prob_below_sup, prob_above_sup, probyobs_cox, probyfcst_cox, varx_cox, coef_beta, 
+            cox_iqr, obs_mediana, obs_iqr) = Calibration.calibration_cox_model(path_fcst, path_hcst, path_obs, base, year_fcst, month_fcst, model, var)
+
+            Calibration.write_netcdf_model_cox(base, year_fcst, month_fcst, model, var, 
+            anom_calib, mediana_calib, prob_above_calib, prob_tercile, prob_below_inf, 
+            prob_above_inf,  prob_below_sup, prob_above_sup, probyobs_cox, probyfcst_cox, 
+            varx_cox, coef_beta, cox_iqr, obs_mediana, obs_iqr)
+
+    elif calib == "gamma":
+        if var == "prec":
+            (anom_calib, acum_calib, stdev_calib, alpha, beta, prob_below_inf, prob_above_inf,
+            prob_below_sup, prob_above_sup, prob_central_terc, prob_tercile, corr, alpha_obs, beta_obs, p_hcst) = Calibration.gamma_calibration_model(path_fcst, path_hcst, path_obs, base, year_fcst, month_fcst, model, var)
+        
+            Calibration.write_netcdf_gamma(base, year_fcst, month_fcst, model, var, 
+            anom_calib, acum_calib, stdev_calib, alpha, beta, prob_below_inf, prob_above_inf,
+            prob_below_sup, prob_above_sup, prob_central_terc, prob_tercile, corr, alpha_obs, beta_obs, p_hcst)
+                

@@ -1,0 +1,176 @@
+models:
+
+  ecmwf:
+    version: 51
+    title: ECMWF
+    directory: ecmwf
+
+  ukmo:
+    version: 610
+    title: UK_MetOffice
+    directory: ukmo
+
+  meteofr:
+    version: 9
+    title: Meteo_France
+    directory: meteofr
+
+  dwd:
+    version: 22
+    title: DWD
+    directory: dwd
+
+  cmcc:
+    version: 4
+    title: CMCC
+    directory: cmcc
+
+  ncep:
+    version: 2
+    title: NCEP
+    directory: ncep
+
+  jma:
+    version: 4
+    title: JMA
+    directory: jma
+
+  eccc4:
+    version: 4
+    title: ECCC
+    directory: eccc
+
+  eccc5:
+    version: 5
+    title: ECCC
+    directory: eccc
+
+  bom:
+    version: 2
+    title: BOM
+    directory: bom
+
+  canesm:
+    version: 5
+    title: CanESM
+    directory: canesm
+
+  cfs:
+    version: 2
+    title: NCEP_CFS
+    directory: cfs
+
+  gemnemo:
+    version: 5.2
+    title: GEM_NEMO5.2
+    directory: gem52nemo
+
+  ccsm:
+    version: 4
+    title: NCAR_CCSM
+    directory: ccsm
+    opendap:
+      center: COLA-RSMAS
+      directory: CCSM4
+
+  cesm:
+    version: 1
+    title: NCAR_CESM
+    directory: cesm
+    opendap:
+      center: COLA-RSMAS
+      directory: CESM1
+
+  cansips:
+    version: 4
+    title: CanSIPS_IC
+    directory: cansips     
+    opendap:
+      center: ECCC
+      directory: CanSIPS-IC4
+
+  geos:
+    version: 2
+    title: NASA_GEOSS2S
+    directory: geoss2s
+    opendap:
+      center: NASA-GMAO
+      directory: GEOSS2S
+
+  spear:
+    version: 1
+    title: GFDL_SPEAR
+    directory: spear
+    opendap:
+      center: NOAA-GFDL
+      directory: SPEAR
+
+  bam:
+    version: 1.2
+    title: CPTEC_BAM1.2
+    directory: bam12
+    dims:
+      time: time
+      member: ens
+      lat: lat
+      lon: lon
+
+  echam:
+    version: 4.6
+    title: ECHAM4.6
+    directory: echam46
+    dims:
+      time: time
+      member: ens
+      lat: lat
+      lon: lon
+
+bases:
+
+  copernicus:
+
+    multimodel_version: 1
+    
+    dims:
+
+      time: forecastMonth
+      member: number
+      lat: latitude
+      lon: longitude
+
+    models:
+      - ecmwf
+      - ukmo
+      - meteofr
+      - dwd
+      - cmcc
+      - ncep
+      - jma
+      - eccc4
+      - eccc5
+      - bom
+      - bam
+      - echam
+
+  nmme:
+
+    multimodel_version: 1
+
+    dims:
+
+      time: L
+      member: M
+      lat: Y
+      lon: X
+
+    models:
+      - canesm
+      - cfs
+      - gemnemo
+      - ccsm
+      - cesm
+      - cansips
+      - geos
+      - spear
+      - bam
+      - echam

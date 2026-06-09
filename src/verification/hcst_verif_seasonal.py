@@ -1,39 +1,54 @@
 import os
 import numpy as np
-import pandas as pd
 import xarray as xr
-import netCDF4
 import calendar
 from pathlib import Path
 from datetime import date, datetime,timedelta
 from dateutil.relativedelta import *
-from src.config.config_models_seasonal import ConfigModelos
+from src.config.config_models import ConfigModelos
 import matplotlib.pyplot as plt
-import cartopy.crs as ccrs
-import cartopy.feature as cfeature
-
-#Directories
-path_hcst = "/dados/mmclima/multimodelo/seasonal/hindcast"
-path_fcst = "/dados/mmclima/multimodelo/seasonal/forecast"
 
 class Hindcast:
     def __init__(self, path_fcst, path_hcst):
+
         self.path_fcst = path_fcst
+
         self.path_hcst = path_hcst
+
+        self.years_hcst = {
+            "nmme": range(1991, 2021),
+            "copernicus": range(1993, 2017)
+        }
 
     def read_hcst_file(self, base, year_hcst, month_hcst, model, var):
         '''Armazena os dados de cada modelo fornecidos como lista no parâmetro models e para a variável var.
         Exemplo: year,month,day = itera na lista de climatologia '''
 
-        if model == "multimodel":
-            name_model = "multimodel"
+        if model == "multimodel" or base == "nmme":
+            name_model = model
         else:
-            name_model = model if base == "nmme" else ConfigModelos.get_model_dir(model)
+            name_model = ConfigModelos.get_model_dir_c3s(model)
 
         month = f"{month_hcst:02d}"
-        month_name = calendar.month_abbr[month_hcst].capitalize() #nome do mês
-        hcst_dir = f"{self.path_hcst}/{base}/{name_model}/{year_hcst}/"
-        file_name_hcst = os.path.join(hcst_dir, f"{var}_monthly_{name_model}_hcst_interp_{year_hcst}{month}01.nc")
+
+        hcst_dir = (
+            self.path_hcst /
+            base /
+            name_model /
+            str(year_hcst)
+        )
+
+        if model != "echam46":
+            file_name_hcst = (
+                hcst_dir /
+                f"{var}_monthly_{name_model}_hcst_interp_{year_hcst}{month}01.nc"
+            )
+        else:
+            file_name_hcst = (
+                hcst_dir /
+                f"{var}_seasonaly_{name_model}_hcst_interp_{year_hcst}{month}01.nc"
+            )
+
         model_hcst = xr.open_dataset(file_name_hcst, decode_times=False)
         model_hcst = model_hcst.squeeze()
         var_name = list(model_hcst.data_vars)[0]
@@ -44,9 +59,10 @@ class Hindcast:
         else:
             member_dim = "M" if base == "nmme" else "number"
 
-        model_hcst = model_hcst.mean(dim=member_dim, skipna=True)
+        if model != "echam46":
+            model_hcst = model_hcst.mean(dim=member_dim, skipna=True)
 
-        if base == "copernicus" and model != "bam12": #transforma de m/s para mm/dia
+        if base == "copernicus" and model not in ("bam12","echam46"): #transforma de m/s para mm/dia
             model_hcst[var_name] = (model_hcst[var_name] * 1000  * 86400) if var == "prec" else model_hcst[var_name]
 
         dataset = model_hcst
@@ -62,12 +78,17 @@ class Hindcast:
         if model == "multimodel":
             name_model = "multimodel"
         else:
-            name_model = model if base == "nmme" else ConfigModelos.get_model_dir(model)
+            name_model = model if base == "nmme" else ConfigModelos.get_model_dir_c3s(model)
 
         month = f"{month_hcst:02d}"
-        month_name = calendar.month_abbr[month_hcst].capitalize()
-        hcst_dir = f"{self.path_hcst}/{base}/{name_model}/{year_hcst}/"
-        file_name_hcst = os.path.join(hcst_dir, f"{var}_monthly_{name_model}_hcst_interp_{year_hcst}{month}01.nc")
+
+        file_name_hcst = (
+            self.path_hcst /
+            base /
+            name_model /
+            str(year_hcst) /
+            f"{var}_monthly_{name_model}_hcst_interp_{year_hcst}{month}01.nc"
+        )
 
         model_hcst = xr.open_dataset(file_name_hcst, decode_times=False)
         model_hcst = model_hcst.squeeze()
@@ -101,7 +122,7 @@ class Hindcast:
                         new_date = date(year_hcst, month_hcst, 1) + relativedelta(months=start) #soma um mes
                         ndays = calendar.monthrange(year_hcst, new_date.month)[1]
 
-                        if model == "bam12":
+                        if model in ("bam12", "echam46"):
                             sel = model_hcst.isel(time=slice(start, end))
                             var_name = list(sel.data_vars)[0]
                         else:
@@ -110,26 +131,43 @@ class Hindcast:
                             sel[var_name] = sel[var_name] * ndays
 
                         hcst[period] = sel[var_name].squeeze()
+
                     else:
-                        if period == "seas00":
-                            hcst[period] = (
-                                hcst["mnth00"] + hcst["mnth01"] + hcst["mnth02"]
-                            )                        
-                        elif period == "seas01":
-                            hcst[period] = (
-                                hcst["mnth01"] + hcst["mnth02"] + hcst["mnth03"]
-                            )
-                        elif period == "seas02":
-                            hcst[period] = (
-                                hcst["mnth02"] + hcst["mnth03"] + hcst["mnth04"]
-                            )
+
+                        if model != "echam46":
+                            if period == "seas00":
+                                hcst[period] = (
+                                    hcst["mnth00"] + hcst["mnth01"] + hcst["mnth02"]
+                                )                        
+                            elif period == "seas01":
+                                hcst[period] = (
+                                    hcst["mnth01"] + hcst["mnth02"] + hcst["mnth03"]
+                                )
+                            elif period == "seas02":
+                                hcst[period] = (
+                                    hcst["mnth02"] + hcst["mnth03"] + hcst["mnth04"]
+                                )
+                        
+                        else:
+                            if period == "seas00":
+                                hcst[period] = (
+                                    (hcst["mnth00"] + hcst["mnth01"] + hcst["mnth02"]) / 3
+                                )                      
+                            elif period == "seas01":
+                                hcst[period] = (
+                                   (hcst["mnth00"] + hcst["mnth01"] + hcst["mnth02"]) / 3
+                                )
+                            elif period == "seas02":
+                                hcst[period] = (
+                                    (hcst["mnth00"] + hcst["mnth01"] + hcst["mnth02"]) / 3
+                                )                            
 
                 elif base == "copernicus": 
                     if is_mensal:
                         new_date = date(year_hcst, month_hcst, 1) + relativedelta(months=start) #soma um mes
                         ndays = calendar.monthrange(year_hcst, new_date.month)[1]   
 
-                        if model == "bam12":
+                        if model in ("bam12", "echam46"):
                             sel = model_hcst.isel(time=slice(start, end))
                             var_name = list(sel.data_vars)[0]
                         else:
@@ -213,13 +251,9 @@ class Hindcast:
 
     def climatology_model_hcst(self, base, month_hcst, model, var):
         '''Calcula os acumulados/médias para o periodo de climatologia'''
-        if base == "nmme":
-            years_hcst = range(1991, 2021)  
-        elif base == "copernicus":
-            years_hcst = range(1993, 2017)
-        #
+
         hindcast = {}
-        for year_hcst in years_hcst:
+        for year_hcst in self.years_hcst[base]:
             model_hcst = self.read_hcst_file(base, year_hcst, month_hcst, model, var)
             hindcast[year_hcst] = self.calculate_hcst_periods(base, year_hcst, month_hcst, model, model_hcst, var)
         return hindcast 
@@ -229,13 +263,9 @@ class Hindcast:
         Calcula os acumulados/médias para o período de climatologia
         mas mantém a dimensão dos membros (sem média ensemble).
         """
-        if base == "nmme":
-            years_hcst = range(1991, 2021)
-        elif base == "copernicus":
-            years_hcst = range(1993, 2017)
 
         hindcast = {}
-        for year_hcst in years_hcst:
+        for year_hcst in self.years_hcst[base]:
             # Lê arquivo sem tirar média dos membros
             model_hcst = self.read_hcst_file_members(base, year_hcst, month_hcst, model, var)
             # Usa exatamente a mesma lógica para acumulados e médias
@@ -246,14 +276,9 @@ class Hindcast:
         '''Converte dicionario no formato hindcast[time][period][var] para array 
         com dimensão (time climatology, periods accumulation, lat, lon)'''
 
-        if base == "nmme":
-            years_hcst = range(1991, 2021)  
-        elif base == "copernicus":
-            years_hcst = range(1993, 2017)
-
         time_arrays = []            
         for t in range(len(hindcast)):
-            period_arrays = [hindcast[years_hcst[t]][p].values for p in periods]
+            period_arrays = [hindcast[self.years_hcst[base][t]][p].values for p in periods]
             stacked_periods = np.stack(period_arrays, axis=0)  # shape: (period, lat, lon)
             time_arrays.append(stacked_periods)
 
@@ -263,16 +288,11 @@ class Hindcast:
         '''Converte dicionário no formato hindcast[ano][periodo][var] para array 
         com dimensão (anos, períodos, membros, lat, lon)'''
 
-        if base == "nmme":
-            years_hcst = range(1991, 2021)  
-        elif base == "copernicus":
-            years_hcst = range(1993, 2017)
-
         time_arrays = []
         for t in range(len(hindcast)):
             period_arrays = []
             for p in periods:
-                arr = hindcast[years_hcst[t]][p].values  # (members, lat, lon)
+                arr = hindcast[self.years_hcst[t]][p].values  # (members, lat, lon)
 
                 # --- Tratamento especial para CFSv2 ---
                 if model == "cfsv2":
@@ -292,40 +312,56 @@ class Hindcast:
     def hindcast_multimodel(self, base, year_fcst, month_fcst, var):    
         '''Calcula a média multimodelo para todos os períodos de acúmulo/media
         para os modelos disponíveis'''
-        if base == "nmme":
-            models_all = ["canesm5", "ccsm4","cesm1", "cfsv2", "gem52nemo", "geos5v2", "spear", "bam12"] #
-            #models_all = ["ccsm4","cesm1", "cfsv2", "geos5v2", "spear", "bam12"] #
-        if base == "copernicus":
-            models_all = ["ecmwf", "ukmo","meteo_france","dwd","cmcc","ncep","jma","eccc4","eccc5","bom","bam12"]
 
-        models_available = models_all
+        models_available = {
+            "nmme":[
+                "canesm5", 
+                "ccsm4",
+                "cesm1", 
+                "cfsv2", 
+                "gem52nemo", 
+                "geos5v2", 
+                "spear", 
+                "bam12",
+                "echam46",
+                ],
+
+            "copernicus":[
+                "ecmwf", 
+                "ukmo",
+                "meteo_france",
+                "dwd",
+                "cmcc",
+                "ncep",
+                "jma",
+                "eccc4",
+                "eccc5",
+                "bom",
+                "bam12",
+                "echam46",
+                ]
+
+        }
+
         model_names = [
-        model if base == "nmme" else ConfigModelos.get_model_dir(model)
-        for model in models_available]
+        model if base == "nmme" else ConfigModelos.get_model_dir_c3s(model)
+        for model in models_available[base]]
 
         hcst_arrays = {}
-        if base == "nmme":
-            shape = (30, 8, 72, 144)  # define o shape padrão para arrays vazias
-        elif base == "copernicus":
-            shape = (24, 8, 72, 144) 
 
-        for model in models_all:
-            if model in models_available: 
-                name_model = model if base == "nmme" else ConfigModelos.get_model_dir(model)
-                hcst_dict = self.climatology_model_hcst(base, month_fcst, model, var)
-                hcst_arrays[name_model] = self.dict_to_array(base, hcst_dict, ["mnth00","mnth01","mnth02","mnth03","mnth04","seas00","seas01","seas02"], var)
-            else: 
-                name_model = model if base == "nmme" else ConfigModelos.get_model_dir(model)
-                hcst_arrays[name_model] = np.full(shape, np.nan)
+        for model in models_available[base]:
+            name_model = model if base == "nmme" else ConfigModelos.get_model_dir_c3s(model)
+            hcst_dict = self.climatology_model_hcst(base, month_fcst, model, var)
+            hcst_arrays[name_model] = self.dict_to_array(base, hcst_dict, ["mnth00","mnth01","mnth02","mnth03","mnth04","seas00","seas01","seas02"], var)
 
         stacked = np.stack([hcst_arrays[m] for m in model_names], axis=0)
-        multimodel_hcst = (np.nansum(stacked, axis=0))/len(models_available)
+        multimodel_hcst = (np.nansum(stacked, axis=0))/len(models_available[base])
 
         return multimodel_hcst
 
-
     def mean_std_anom_hindcast(self, base, year_fcst, month_fcst, model, var):
         '''Calcula a média e o desvio padrão  da climatologia dos hindcasts'''
+
         if model == "multimodel":
             model_hcst = self.hindcast_multimodel(base, year_fcst, month_fcst, var)
             n_years = model_hcst.shape[0]
@@ -338,6 +374,7 @@ class Hindcast:
                 hcst_mean[i] = np.nanmean(data_excl_i, axis=0)
                 hcst_std[i] = np.nanstd(data_excl_i, axis=0)
             hcst_anomaly = (model_hcst) - (hcst_mean)
+
         else:
             hcst_dict = self.climatology_model_hcst(base, month_fcst, model, var)
             model_hcst = self.dict_to_array(base, hcst_dict, ["mnth00","mnth01","mnth02","mnth03","mnth04","seas00","seas01","seas02"], var)
@@ -351,7 +388,7 @@ class Hindcast:
                 hcst_mean[i] = np.nanmean(data_excl_i, axis=0)
                 hcst_std[i] = np.nanstd(data_excl_i, axis=0)
             hcst_anomaly = (model_hcst) - (hcst_mean)      
-        # 
+        
         return model_hcst, hcst_mean, hcst_std, hcst_anomaly
 
     def mean_std_anom_hindcast_gamma(self, base, year_fcst, month_fcst, model, var):

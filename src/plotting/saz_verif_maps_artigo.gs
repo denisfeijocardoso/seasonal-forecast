@@ -25,7 +25,7 @@ incrprof=2
 **monthl='20250201'
 **monthn='FEB'
 
-monthl='20250201'
+monthl='2026020100'
 monthn='FEB'
 
 calibracoes.1 = 'regr'
@@ -55,14 +55,12 @@ while (j <= 1)
             lt=0
 
             while(lt<=ltf)
-                metl='corskill' 
-**aroctinf aroctsup'   
-**rocarea_lowertercile rocarea_uppertercile'  
-                metm='corr'                           
+                metl='corskill aroctinf aroctsup' 
+                metm='corr rocarea_lowertercile rocarea_uppertercile'                           
                 meti=1
                 metf=3
 
-                while(meti<=1)
+                while(meti<=metf)
 
                     met=subwrd(metl,meti)
                     metname=subwrd(metm,meti)
@@ -92,7 +90,7 @@ while (j <= 1)
                             out     = '/dados/mmclima/multimodelo/artigo/dados/'
                             '!mkdir -p 'out'' 
                         endif
-                        file = namevar % "_" % met % "_" % plt % lt % "_" % model % "_calibrated_regr_" % anomesdia % "_masked.nc"
+                        file = namevar % "_" % met % "_" % plt % lt % "_" % model % "_calibrated_regr_" % anomesdia % ".nc"
                     endif
 
                     if (calibration = 'cox')
@@ -106,7 +104,7 @@ while (j <= 1)
                             out     = '/dados/mmclima/multimodelo/artigo/dados/'                            
                             '!mkdir -p 'out'' 
                         endif
-                        file = namevar % "_" % met % "_" % plt % lt % "_" % model % "_calibrated_cox_" % anomesdia % "_masked.nc"
+                        file = namevar % "_" % met % "_" % plt % lt % "_" % model % "_calibrated_cox_" % anomesdia % ".nc"
                     endif
 
                     fullpath_in = path_in''file

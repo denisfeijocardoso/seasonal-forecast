@@ -6,18 +6,18 @@ import matplotlib.pyplot as plt
 from scipy.io import netcdf_file
 from netCDF4 import Dataset
 from scipy.stats import linregress
-from src.forecast.forecast_sazonal import Forecast
-from src.hindcast.hindcast_sazonal import Hindcast
-from src.observation.observation_sazonal import Observation
+from src.forecast.forecast_seasonal import Forecast
+from src.hindcast.hindcast_seasonal import Hindcast
+from src.observation.observation_seasonal import Observation
 
 ##############
 #SCATTER PLOT#
 ##############
 
-path_hcst = "/dados/mmclima/multimodelo/sazonal/hindcast"
-path_fcst = "/dados/mmclima/multimodelo/sazonal/forecast"
-path_obs = "/dados/mmclima/multimodelo/sazonal/obs"
-outdir = "/dados/mmclima/multimodelo/sazonal/figures/artigo"
+path_hcst = "/dados/mmclima/multimodelo/seasonal/hindcast"
+path_fcst = "/dados/mmclima/multimodelo/seasonal/forecast"
+path_obs = "/dados/mmclima/multimodelo/seasonal/obs"
+outdir = "/dados/mmclima/multimodelo/seasonal/figures/artigo/echam"
 
 base = "nmme"
 month_fcst = 2
@@ -61,7 +61,7 @@ pontos_2025 = {
     "riogrande": (23, 123)  # lat_obs[25], lon_obs[123] → (-26.25, -51.25)        
 }
 
-obs = xr.open_dataset("/dados/mmclima/multimodelo/sazonal/obs/gpcp/obs_gpcp_pr_mon_mean_1979-2025.nc")
+obs = xr.open_dataset("/dados/mmclima/multimodelo/seasonal/obs/gpcp/obs_gpcp_pr_mon_mean_1979-2025.nc")
 lat_obs = obs["lat"].values
 lon_obs = obs["lon"].values
 
@@ -112,11 +112,11 @@ for nome, (lat_idx, lon_idx) in pontos_2025.items():
             f"Calibrated Multi-Model: GPCP (1991-2020)  Issued: Feb Valid for MAM"
             ,fontsize=18, fontweight='bold')
 
-    # if nome == "SC":
-    #     plt.title(
-    #         f"a) Relationship btw hcst. and obs. precip.  Lat:{lat_str} Lon:{lon_str}\n"
-    #         f"Calibrated Multi-Model: GPCP (1991-2020)  Issued: Feb Valid for MAM"
-    #         ,fontsize=18, fontweight='bold')
+    if nome == "SC":
+        plt.title(
+            f"a) Relationship btw hcst. and obs. precip.  Lat:{lat_str} Lon:{lon_str}\n"
+            f"Calibrated Multi-Model: GPCP (1991-2020)  Issued: Feb Valid for MAM"
+            ,fontsize=18, fontweight='bold')
 
     elif nome == "Chile":
         plt.title(
@@ -141,7 +141,7 @@ for nome, (lat_idx, lon_idx) in pontos_2025.items():
 # months = [2,3,4,5]
 # model = "multimodel"
 
-# artigo_dir = "/dados/mmclima/multimodelo/subsazonal/posproc/subc/artigo/"
+# artigo_dir = "/dados/mmclima/multimodelo/subseasonal/posproc/subc/artigo/"
 
 # for month in months:
 #     file_hcst = f"{artigo_dir}/hcst_total_{model}_{var}_{month:02d}.nc"
@@ -208,7 +208,7 @@ for nome, (lat_idx, lon_idx) in pontos_2025.items():
 #         "ds4401": "44 DAYS",
 #     }
 
-#     path = "/dados/mmclima/multimodelo/subsazonal/figures/subc/artigo/"
+#     path = "/dados/mmclima/multimodelo/subseasonal/figures/subc/artigo/"
 #     mes_str = f"{month:02d}"  
 
 #     for p in range(10):

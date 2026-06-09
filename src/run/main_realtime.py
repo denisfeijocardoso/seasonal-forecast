@@ -3,10 +3,10 @@ import time
 import glob
 import subprocess
 import argparse
-from src.run.seasonal_forecast_utils import  Run
+from src.utils.seasonal_forecast_utils import  Run
 from src.curves.plot_curves_seasonal import  Curves
-from src.config.config_models_seasonal import ConfigModelos
-from src.config.config_dir_seasonal import path_hcst, path_fcst, path_obs
+from src.config.config_models import ConfigModelos
+from src.config.config_path import path_hcst, path_fcst, path_obs
 from src.calibration.calibr_fcst_seasonal import Calibration
 
 #============#
@@ -104,3 +104,7 @@ for base in bases:
 
 fim = time.time()  # <<< Fim da contagem
 print(f"Tempo total: {(fim - inicio)/60:.2f} minutos")
+
+
+
+
