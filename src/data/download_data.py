@@ -3,20 +3,22 @@ import numpy as np
 import requests
 import pandas as pd
 import calendar
-from bs4 import BeautifulSoup
-from tqdm import tqdm
 import xarray as xr
-import datetime
+import logging
 from pathlib import Path
 import cftime 
 import cdsapi
-from src.config.config_models import ConfigModelos
-from src.config.config_path import path_hcst, path_fcst, path_obs
+from src.config.loader import VARIABLES_CONFIG
+from src.config.paths import PATH_FCST, PATH_HCST, PATH_OBS
+from src.config.config_models import get_model_version, build_model_dir_name
+
+logger = logging.getLogger(__name__)
 
 # URL base
 base_url_obs = "https://www.ncei.noaa.gov/data/global-precipitation-climatology-project-gpcp-daily/access/"
 
 url_gpcp = "https://psl.noaa.gov/thredds/fileServer/Datasets/gpcp/precip.mon.mean.error.nc"
+
 url_cmap = "https://psl.noaa.gov/thredds/fileServer/Datasets/cmap/std/precip.mon.mean.nc"
 
 #############
@@ -24,7 +26,9 @@ url_cmap = "https://psl.noaa.gov/thredds/fileServer/Datasets/cmap/std/precip.mon
 #############
 
 def download_monthly_obs(url):
+
     homedir = Path.home()
+
     output_path = homedir/"work/projects/seasonal/data/obs"
     try:
         # Envia uma solicitação HTTP GET para a URL
@@ -45,7 +49,8 @@ def download_monthly_obs(url):
 
 def transform_and_split_time_obs(file, output_dir):
     #Mudar a coordenada do tempo no NetCDF das observações para a unidade "ano-mes-dia-hora"
-    data_obs = xr.open_dataset(f"{path_obs}/gpcp/{file}", decode_times=False)
+    data_obs = xr.open_dataset(f"{PATH_OBS}/gpcp/{file}", decode_times=False)
+    
     dates_obs = cftime.num2date(data_obs['time'].values, data_obs['time'].units)
     new_time = np.array([np.datetime64(d) for d in dates_obs], dtype='datetime64[D]')
     data_obs['time'] = new_time
@@ -76,244 +81,471 @@ def transform_and_split_time_obs(file, output_dir):
         print(f"✔ Escreveu: {outfile}")
     return data_obs
 
-file = "obs_gpcp_pr_mon_mean_1979-2025.nc"
-
-file = "obs_gpcp_pr_mon_mean_1979-2025.nc"
-
-output_dir = "/dados/mmclima/multimodelo/seasonal/obs"
-
 
 ###########
 #HINDCASTS#
 ###########
 
-def download_hcstfile_nmme(init_year, end_year, model, var):
-    periods = pd.date_range(start=f"{init_year}-01-01", end=f"{end_year}-12-31", freq='ME')
-    months_period = periods.strftime('%b')
-    years_period = periods.strftime('%Y')
+def download_hcstfile_nmme(
+        init_year: int, 
+        end_year: int, 
+        model: str, 
+        var: str
+    ):
+
+    dates_climatology = pd.date_range(start=f"{init_year}-01-01", end=f"{end_year}-12-31", freq='ME')
+
     nmme_url = "https://iridl.ldeo.columbia.edu/SOURCES/.Models/.NMME"
+    
+    var_download = VARIABLES_CONFIG[var]["nmme_iri"]["variable"]
+
     base_urls = {
-        "cfsv2": f"{nmme_url}/.NCEP-CFSv2/.HINDCAST/.MONTHLY/.{var}/S",
-        "cfsv2_fcst": f"{nmme_url}/.NCEP-CFSv2/.FORECAST/.EARLY_MONTH_SAMPLES/.MONTHLY/{var}/S",
-        "canesm5": f"{nmme_url}/.CanSIPS-IC4/.CanESM5/.HINDCAST/.MONTHLY/.{var}/S",
-        "gem": f"{nmme_url}/.CanSIPS-IC4/.GEM5.2-NEMO/.HINDCAST/.MONTHLY/.{var}/S",
-        "gfdl": f"{nmme_url}/.GFDL-SPEAR/.HINDCAST/.MONTHLY/.{var}/S",
-        "cesm1": f"{nmme_url}/.COLA-RSMAS-CESM1/.MONTHLY/.{var}/S",  
-        "ccsm4": f"{nmme_url}/.COLA-RSMAS-CCSM4/.MONTHLY/.{var}/S",    
-        "geos5v2": f"{nmme_url}/.NASA-GEOSS2S/.HINDCAST/.MONTHLY/.{var}/S",  
-        "geos5v2_fcst": f"{nmme_url}/.NASA-GEOSS2S/.FORECAST/.MONTHLY/.{var}/S",  
+        "cfs": f"{nmme_url}/.NCEP-CFSv2/.HINDCAST/.MONTHLY/.{var_download}/S",
+
+        "cfs_fcst": f"{nmme_url}/.NCEP-CFSv2/.FORECAST/.EARLY_MONTH_SAMPLES/.MONTHLY/{var_download}/S",
+
+        "canesm": f"{nmme_url}/.CanSIPS-IC4/.CanESM5/.HINDCAST/.MONTHLY/.{var_download}/S",
+
+        "gemnemo": f"{nmme_url}/.CanSIPS-IC4/.GEM5.2-NEMO/.HINDCAST/.MONTHLY/.{var_download}/S",
+
+        "spear": f"{nmme_url}/.GFDL-SPEAR/.HINDCAST/.MONTHLY/.{var_download}/S",
+
+        "cesm": f"{nmme_url}/.COLA-RSMAS-CESM1/.MONTHLY/.{var_download}/S",  
+
+        "ccsm": f"{nmme_url}/.COLA-RSMAS-CCSM4/.MONTHLY/.{var_download}/S",  
+
+        "geos": f"{nmme_url}/.NASA-GEOSS2S/.HINDCAST/.MONTHLY/.{var_download}/S",  
+
+        "geos_fcst": f"{nmme_url}/.NASA-GEOSS2S/.FORECAST/.MONTHLY/.{var_download}/S",  
     }
+
     base_url_hcst = base_urls.get(model)
-    for period in periods:
-        year = period.year
-        monthstr = period.strftime('%b')
-        month_hcst =  f"{period.month:02d}"
+    name_model_dir = build_model_dir_name(model)
+
+    for date_clim in dates_climatology:
+
+        year = date_clim.year
+
+        monthstr = date_clim.strftime('%b')
+
+        month_hcst =  f"{date_clim.month:02d}"
+
         http_url = f"{base_url_hcst}/%280000%201%20{monthstr}%20{year}%29VALUES/data.nc"
-        year_dir = f"{path_hcst}/nmme/{model}/{str(year)}"
-        if not os.path.exists(year_dir):
-            os.makedirs(year_dir)
 
-        # '''Nome do arquivo'''
-        if var == "prec":
-            file_name = f"{var}_monthly_{model}_hcst_{year}{month_hcst}01.nc"  
-        elif var == "tref":
-            file_name = file_name = f"t2mt_monthly_{model}_hcst_{year}{month_hcst}01.nc"        
-        file_path = os.path.join(year_dir, file_name)
+        download_path = (
+            PATH_HCST/
+            "nmme" / 
+            name_model_dir /
+            str(year)
+        )
+        
+        download_path.mkdir(
+            parents=True,
+            exist_ok=True
+        )
 
-        # Baixa o arquivo
-        if os.path.exists(({year_dir}/{file_name})):
-            print(f"Arquivo já existe, pulando o download: {year_dir}/{file_name}")
+        file_name = f"{var}_monthly_{name_model_dir}_hcst_{year}{month_hcst}01.nc"  
+
+        file_path = (
+            download_path / 
+            file_name
+        )
+
+        if file_path.exists():
+            
+            logger.info(
+                f"NMME: Arquivo já existe, pulando o download: {file_path}"
+            )
             
         else:
-            # ''' Baixar o arquivo '''
+
+            base_url_hcst = base_urls.get(f"{model}_fcst")
+
+            http_url = f"{base_url_hcst}/%280000%201%20{monthstr}%20{year}%29VALUES/data.nc"
+
             try:
-                base_url_hcst = base_urls.get(f"{model}_fcst")
-                print(base_url_hcst)
-                http_url = f"{base_url_hcst}/%280000%201%20{monthstr}%20{year}%29VALUES/data.nc"
-                print(http_url)
-                download_response = requests.get(http_url, timeout=300)
-                with open(file_path, 'wb') as f:
-                    f.write(download_response.content)
-                    print(f"Arquivo baixado: {file_path}")   
-                # elif file_size is None:
-                #     print(f"Arquivo não encontrado em: {http_url}")
-                #     continue  # Continua para o próximo URL no loop
+
+                logger.info(
+                    f"Baixando {http_url}"
+                )
+
+                download_response = requests.get(
+                    http_url, 
+                    timeout=300
+                )
+
+                with open(file_path, "wb") as f:
+
+                    f.write(
+                        download_response.content
+                    )
+                
+                # Verifica se o arquivo é um NetCDF válido
+                xr.open_dataset(
+                    file_path
+                ).close()
+
+                logger.info(
+                    f"NMME: Arquivo baixado: {file_path}"
+                )
 
             except requests.exceptions.RequestException as e:
-                print(f"Ocorreu um erro ao tentar acessar o URL {http_url}: {e}")
-                continue  # Caso aconteça um erro, continue com o próximo URL no loop
 
-def download_hcstfile_copernicus(init_year, end_year, init_month, end_month, model, var):
+                logger.error(
+                    f"NMME: Erro ao acessar {http_url}: {e}"
+                )
+
+            except Exception as e:
+
+                file_path.unlink(
+                    missing_ok=True
+                )
+
+                logger.warning(
+                    f"NMME: Arquivo inválido ou indisponível: {file_path} ({e})"
+                )
+
+def download_hcstfile_copernicus(
+        init_year: int, 
+        end_year: int, 
+        init_month: int, 
+        end_month: int, 
+        model: str, 
+        var: str
+):
     init_month = f"{init_month:02d}"
     end_month = f"{end_month:02d}"
-    #periods = pd.date_range(start=f"{init_year}-{init_month}-01", end=f"{end_year}-{end_month}-30", freq='M')
-    periods = pd.period_range(start=f"{init_year}-{init_month}", end=f"{end_year}-{end_month}", freq="M")
-    lead_time = ["1","2","3","4","5","6"]
 
-    if var == "total_precipitation":
-        var_name_file = "prec"
-    elif var == "2m_temperature":
-        var_name_file = "t2mt"
+    dates_climatology = pd.period_range(start=f"{init_year}-{init_month}", end=f"{end_year}-{end_month}", freq="M")
+
+    lead_time =[str(i) for i in range(1, 7)]
+
+    var_download = VARIABLES_CONFIG[var]["copernicus"]["variable"]
 
     # Versão (system_type) e diretório de destino
-    system_type = ConfigModelos.get_model_version(model)
-    name_model_dir = ConfigModelos.get_model_dir_c3s(model)
+    system_type = get_model_version(model)
+    name_model_dir = build_model_dir_name(model)
 
-    for period in periods:
-        # Definir as datas
-        year_hcst = period.year
-        month_hcst = f"{period.month:02d}"
-        monthstr = period.strftime('%b')
+    for date_clim in dates_climatology:
+
+        year_hcst = date_clim.year
+        month_hcst = f"{date_clim.month:02d}"
+        monthstr = date_clim.strftime('%b')
 
         # Configurações do dataset e modelos
         dataset = "seasonal-monthly-single-levels"
 
-        # Diretorio para salvar os arquivos
-        if model in ["eccc4", "eccc5"]:
-            year_dir = f"{path_hcst}/copernicus/{name_model_dir}/{str(year_hcst)}"
-        else:
-            year_dir = f"{path_hcst}/copernicus/{name_model_dir}/{str(year_hcst)}"
+        download_path = (
+            PATH_HCST /
+            "copernicus" /
+            name_model_dir / 
+            str(year_hcst)
+        )
 
-        os.makedirs(year_dir, exist_ok=True)
+        download_path.mkdir(
+            parents = True, 
+            exist_ok = True
+        )
 
         # Centro de origem
         origin_centre = "eccc" if model in ["eccc4", "eccc5"] else model
 
         # Requisição
         request = {
+
             "originating_centre": [origin_centre],
+
             "system": f"{system_type}",
-            "variable": [var],
+
+            "variable": [var_download],
+
             "product_type": ["monthly_mean"],
+
             "year": [f"{year_hcst}"],
+
             "month": [f"{month_hcst}"],
+
             "leadtime_month": lead_time,
+
             "data_format": "netcdf"
         }
 
-        output_file = f"{year_dir}/{var_name_file}_monthly_{name_model_dir}_hcst_{str(year_hcst)}{month_hcst}01.nc"  
+        file_name = f"{var}_monthly_{name_model_dir}_hcst_{year_hcst}{month_hcst}01.nc"  
+
+        file_path = (
+            download_path / 
+            file_name
+        )
 
         # Baixa o arquivo
-        if os.path.exists(output_file):
-            print(f"Arquivo já existe, pulando o download: {output_file}")
+        if file_path.exists():
+            logger.info(f"C3S: Arquivo já existe, pulando o download: {file_path}")
+
         else:
-            print(f"Baixando arquivo: {output_file}")
+            
             try:
+
                 client = cdsapi.Client()
-                client.retrieve("seasonal-monthly-single-levels", request).download(output_file)
+
+                client.retrieve(
+                    dataset,
+                    request
+                ).download(file_path)
+
             except Exception as e:
-                print(f" Erro ao baixar {model} ({year_hcst}-{month_hcst}): {e}")
+
+                logger.error(
+                    f"C3S: Erro ao baixar {model} "
+                    f"({year_hcst}-{month_hcst}): {e}"
+                )
+
+                continue
+
+            try:
+
+                xr.open_dataset(
+                    file_path
+                ).close()
+
+                logger.info(
+                    f"C3S: Arquivo baixado: {file_path}"
+                )
+
+            except Exception as e:
+
+                file_path.unlink(
+                    missing_ok=True
+                )
+
+                logger.warning(
+                    f"C3S: Arquivo inválido: "
+                    f"{file_path} ({e})"
+                )
 
 
 ##########
 #REALTIME#
 ##########
 
+def download_realtime_nmme(
+        year_fcst: int,
+        month_fcst: int,
+        model: str,
+        var: str
+):
 
-def download_realtime_nmme(year, month_num, model, var):
-    monthstr = calendar.month_abbr[month_num].capitalize()  # Ex: 4 → 'Apr' 
-    month_fcst = f"{month_num:02d}"
+    monthstr = calendar.month_abbr[month_fcst].capitalize()
+
+    month_fcst = f"{month_fcst:02d}"
+
     nmme_url = "https://iridl.ldeo.columbia.edu/SOURCES/.Models/.NMME"
+
+    var_download = VARIABLES_CONFIG[var]["nmme_iri"]["variable"]
+
     base_urls = {
-        "cfsv2": f"{nmme_url}/.NCEP-CFSv2/.FORECAST/.EARLY_MONTH_SAMPLES/.MONTHLY/.{var}/S",
-        "canesm5": f"{nmme_url}/.CanSIPS-IC4/.CanESM5/.FORECAST/.MONTHLY/.{var}/S",
-        "gem52nemo": f"{nmme_url}/.CanSIPS-IC4/.GEM5.2-NEMO/.FORECAST/.MONTHLY/.{var}/S",
-        "spear": f"{nmme_url}/.GFDL-SPEAR/.FORECAST/.MONTHLY/.{var}/S",
-        "cesm1": f"{nmme_url}/.COLA-RSMAS-CESM1/.MONTHLY/.{var}/S",  
-        "ccsm4": f"{nmme_url}/.COLA-RSMAS-CCSM4/.MONTHLY/.{var}/S",    
-        "geos5v2": f"{nmme_url}/.NASA-GEOSS2S/.FORECAST/.MONTHLY/.{var}/S"
+        "cfs": f"{nmme_url}/.NCEP-CFSv2/.FORECAST/.EARLY_MONTH_SAMPLES/.MONTHLY/.{var_download}/S",
+
+        "canesm": f"{nmme_url}/.CanSIPS-IC4/.CanESM5/.FORECAST/.MONTHLY/.{var_download}/S",
+
+        "gemnemo": f"{nmme_url}/.CanSIPS-IC4/.GEM5.2-NEMO/.FORECAST/.MONTHLY/.{var_download}/S",
+
+        "spear": f"{nmme_url}/.GFDL-SPEAR/.FORECAST/.MONTHLY/.{var_download}/S",
+
+        "cesm": f"{nmme_url}/.COLA-RSMAS-CESM1/.MONTHLY/.{var_download}/S",
+
+        "ccsm": f"{nmme_url}/.COLA-RSMAS-CCSM4/.MONTHLY/.{var_download}/S",
+
+        "geos": f"{nmme_url}/.NASA-GEOSS2S/.FORECAST/.MONTHLY/.{var_download}/S"
     }
-    year_dir = f"{path_fcst}/nmme/{model}/{year}"
 
-    if not os.path.exists(year_dir):
-        os.makedirs(year_dir)
+    name_model_dir = build_model_dir_name(model)
 
-    # '''Nome do arquivo'''
-    if var == "prec":
-        file_name = f"{var}_monthly_{model}_fcst_{year}{month_fcst}01.nc"  
-    elif var == "tref":
-        file_name = f"t2mt_monthly_{model}_fcst_{year}{month_fcst}01.nc"  
+    download_path = (
+        PATH_FCST /
+        "nmme" /
+        name_model_dir /
+        str(year_fcst)
+    )
 
-    file_path = os.path.join(year_dir, file_name)
+    download_path.mkdir(
+        parents=True,
+        exist_ok=True
+    )
+
+    file_name = (
+        f"{var}_monthly_"
+        f"{name_model_dir}_fcst_"
+        f"{year_fcst}{month_fcst}01.nc"
+    )
+
+    file_path = (
+        download_path /
+        file_name
+    )
 
     # Verifica se o arquivo já existe
-    if os.path.exists(file_path):
-        print(f"Arquivo já existe, não precisa baixá-lo: {file_path}")
+    if file_path.exists():
+
+        logger.info(
+            f"NMME: Arquivo já existe: {file_path}"
+        )
+
         return
-    # ''' Baixar o arquivo '''
+
+    base_url_fcst = base_urls.get(model)
+
+    http_url = (
+        f"{base_url_fcst}/"
+        f"%280000%201%20{monthstr}%20{year_fcst}%29VALUES/"
+        f"data.nc"
+    )
+
     try:
-        base_url_fcst = base_urls.get(model)
-        http_url = f"{base_url_fcst}/%280000%201%20{monthstr}%20{year}%29VALUES/data.nc"
-        print(http_url)
-        download_response = requests.get(http_url, timeout=300)
-        with open(file_path, 'wb') as f:
-            f.write(download_response.content)
-            print(f"Arquivo baixado: {file_path}")   
+
+        logger.info(
+            f"NMME: Baixando {http_url}"
+        )
+
+        download_response = requests.get(
+            http_url,
+            timeout=300
+        )
+
+        download_response.raise_for_status()
+
+        with open(file_path, "wb") as f:
+
+            f.write(
+                download_response.content
+            )
+
+        # Verifica se o arquivo é um NetCDF válido
+        xr.open_dataset(
+            file_path
+        ).close()
+
+        logger.info(
+            f"NMME: Arquivo baixado: {file_path}"
+        )
 
     except requests.exceptions.RequestException as e:
-        print(f"Ocorreu um erro ao tentar acessar o URL {http_url}: {e}")
 
+        logger.error(
+            f"NMME: Erro ao acessar {http_url}: {e}"
+        )
 
-def download_realtime_copernicus(year, month_num, model, var):
-    lead_time = ["1","2","3","4","5","6"]
+    except Exception as e:
 
-    if var == "total_precipitation":
-        var_name_file = "prec"
-    elif var == "2m_temperature":
-        var_name_file = "t2mt"
+        file_path.unlink(
+            missing_ok=True
+        )
 
-    # Versão (system_type) e diretório de destino
-    system_type = ConfigModelos.get_model_version(model)
-    name_model_dir = ConfigModelos.get_model_dir_c3s(model)
+        logger.warning(
+            f"NMME: Arquivo inválido ou indisponível: {file_path} ({e})"
+        )
+
+def download_realtime_copernicus(
+        year_fcst: int, 
+        month_fcst: int, 
+        model: str, 
+        var: str
+):
+
+    lead_time = [str(i) for i in range(1, 7)]
+
+    var_download = VARIABLES_CONFIG[var]["copernicus"]["variable"]
+
+    system_type = get_model_version(model)
+    name_model_dir = build_model_dir_name(model)
 
     # Definir as datas
-    month_fcst = f"{month_num:02d}"
-    monthstr = calendar.month_abbr[month_num].capitalize()
+    monthstr = calendar.month_abbr[month_fcst].capitalize()
+    month_fcst = f"{month_fcst:02d}"
     dataset = "seasonal-monthly-single-levels"
 
     # Diretorio para salvar os arquivos
-    if model in ["eccc4", "eccc5"]:
-        year_dir = f"{path_fcst}/copernicus/{name_model_dir}/{str(year)}"
-    else:
-        year_dir = f"{path_fcst}/copernicus/{name_model_dir}/{str(year)}"
+    download_path = (
+        PATH_FCST / 
+        "copernicus" / 
+        name_model_dir /
+        str(year_fcst) 
+    )
 
-    os.makedirs(year_dir, exist_ok=True)
+    download_path.mkdir(
+        parents = True,
+        exist_ok = True
+    )
     
     origin_centre = "eccc" if model in ["eccc4", "eccc5"] else model
 
     # Request do download
     request = {
         "originating_centre": [origin_centre],
+
         "system": f"{system_type}",
-        "variable": [
-            f"{var}",
-        ],
+
+        "variable": [var_download],
+
         "product_type": ["monthly_mean"],
-        "year": [f"{year}"],
+
+        "year": [f"{year_fcst}"],
+
         "month": [f"{month_fcst}"],
-        "leadtime_month": [
-            "1",
-            "2",
-            "3",
-            "4",
-            "5",
-            "6"
-        ],
+
+        "leadtime_month": lead_time,
+
         "data_format": "netcdf"
     } 
 
-    # Nome do arquivo de saída
-    output_file = f"{year_dir}/{var_name_file}_monthly_{name_model_dir}_fcst_{year}{month_fcst}01.nc"  
+    file_name = f"{var}_monthly_{name_model_dir}_hcst_{year_fcst}{month_fcst}01.nc"  
+
+    file_path = (
+        download_path / 
+        file_name
+    )
+    
 
     # Baixa o arquivo
-    if os.path.exists(output_file):
-        print(f"Arquivo já existe, pulando o download: {output_file}")
+    if file_path.exists():
+        
+        logger.info(f"C3S: Arquivo já existe, pulando o download: {file_path}")
+
     else:
-        print(f"Baixando arquivo: {output_file}")
+
         try:
             client = cdsapi.Client()
-            client.retrieve("seasonal-monthly-single-levels", request).download(output_file)
+
+            client.retrieve(
+                dataset, 
+                request
+            ).download(file_path)
+
         except Exception as e:
-            print(f" Erro ao baixar {model} ({year}-{month_fcst}): {e}")
 
+            logger.error(
+                f"C3S: Erro ao baixar {model} "
+                f"({year_fcst}-{month_fcst}): {e}"
+            )
 
+            return
+
+        try:
+
+            xr.open_dataset(
+                file_path
+            ).close()
+
+            logger.info(
+                f"C3S: Arquivo baixado: {file_path}"
+            )
+
+        except Exception as e:
+
+            file_path.unlink(
+                missing_ok=True
+            )
+
+            logger.warning(
+                f"C3S: Arquivo inválido: "
+                f"{file_path} ({e})"
+            )

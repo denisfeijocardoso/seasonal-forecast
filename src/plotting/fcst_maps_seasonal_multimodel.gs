@@ -70,12 +70,17 @@ while (incrproi<=incrprof)
     while(lt<=ltf)
         if(namevar=prec & pro=mnth)
             if (calibration = 'nocalib')
-                metl = 'anom'
+                metl = 'anomaly'
                 metm = 'anomaly'
                 num_met = 1
             endif
-            if (calibration = 'regr' | calibration = 'cox' )
-                metl = 'anom acum terc prob prob10mm prob20mm prob40mm prob60mm prob80mm prob100mm prob150mm prob200mm prob250mm prob300mm prob400mm prob500mm prob600mm percent20 percent50 percent80'
+            if (calibration = 'regr')
+                metl = 'anomaly total mlterciles above_mean prob10mm prob20mm prob40mm prob60mm prob80mm prob100mm prob150mm prob200mm prob250mm prob300mm prob400mm prob500mm prob600mm percent20 percent50 percent80'
+                metm = 'anomaly total probability_tercile probability_positive prob10mm prob20mm prob40mm prob60mm prob80mm prob100mm prob150mm prob200mm prob250mm prob300mm prob400mm prob500mm prob600mm percent20 percent50 percent80'
+                num_met = 20
+            endif
+            if (calibration = 'cox')
+                metl = 'anomaly total mlterciles above_median prob10mm prob20mm prob40mm prob60mm prob80mm prob100mm prob150mm prob200mm prob250mm prob300mm prob400mm prob500mm prob600mm percent20 percent50 percent80'
                 metm = 'anomaly total probability_tercile probability_positive prob10mm prob20mm prob40mm prob60mm prob80mm prob100mm prob150mm prob200mm prob250mm prob300mm prob400mm prob500mm prob600mm percent20 percent50 percent80'
                 num_met = 20
             endif
@@ -83,12 +88,17 @@ while (incrproi<=incrprof)
 
         if(namevar=prec & pro=seas)
             if (calibration = 'nocalib')
-                metl = 'anom'
+                metl = 'anomaly'
                 metm = 'anomaly'
                 num_met = 1
             endif
-            if (calibration = 'regr' | calibration = 'cox' )
-                metl = 'anom acum terc prob prob10mm prob20mm prob40mm prob60mm prob80mm prob100mm prob150mm prob200mm prob250mm prob300mm prob400mm prob500mm prob600mm percent20 percent50 percent80'
+            if (calibration = 'regr')
+                metl = 'anomaly total mlterciles above_mean prob10mm prob20mm prob40mm prob60mm prob80mm prob100mm prob150mm prob200mm prob250mm prob300mm prob400mm prob500mm prob600mm percent20 percent50 percent80'
+                metm = 'anomaly total probability_tercile probability_positive prob10mm prob20mm prob40mm prob60mm prob80mm prob100mm prob150mm prob200mm prob250mm prob300mm prob400mm prob500mm prob600mm percent20 percent50 percent80'
+                num_met = 20
+            endif
+            if (calibration = 'cox')
+                metl = 'anomaly total mlterciles above_median prob10mm prob20mm prob40mm prob60mm prob80mm prob100mm prob150mm prob200mm prob250mm prob300mm prob400mm prob500mm prob600mm percent20 percent50 percent80'
                 metm = 'anomaly total probability_tercile probability_positive prob10mm prob20mm prob40mm prob60mm prob80mm prob100mm prob150mm prob200mm prob250mm prob300mm prob400mm prob500mm prob600mm percent20 percent50 percent80'
                 num_met = 20
             endif
@@ -96,12 +106,17 @@ while (incrproi<=incrprof)
 
         if(namevar=t2mt)
             if (calibration = 'nocalib')
-                metl = 'anom'
+                metl = 'anomaly'
                 metm = 'anomaly'
                 num_met = 1
             endif
-            if (calibration = 'regr' | calibration = 'cox' )
-                metl = 'anom acum terc prob '
+            if (calibration = 'regr')
+                metl = 'anomaly total mlterciles above_mean'
+                metm = 'anomaly total probability_tercile probability_positive'
+                num_met = 4
+            endif
+            if (calibration = 'cox')
+                metl = 'anomaly total mlterciles above_median'
                 metm = 'anomaly total probability_tercile probability_positive'
                 num_met = 4
             endif
@@ -355,7 +370,7 @@ while (incrproi<=incrprof)
                 out     = '/dados/mmclima/multimodelo/seasonal/figures/nmme/'version'/forecast/nocalib/'model'/'ano'/'anomesdiahora'/'
                 '!mkdir -p 'out''   
             endif
-            file = 'fcst_'namevar'_'met'_'plt''lt'_'model'_calibrated_nocalib_'anomesdiahora'.nc'
+            file = 'fcst_'namevar'_'met'_'plt''lt'_'model'_nocalib_'anomesdiahora'.nc'
         endif
 
         if (calibration = 'regr')

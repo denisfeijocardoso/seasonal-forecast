@@ -16,8 +16,17 @@ PATH_OBS  = Path(
     )
 
 PATH_POSPROC = Path(
-    "/dados/mmclima/multimodelo/seasonal/forecast"
+    "/dados/mmclima/multimodelo/seasonal/posproc"
     )
 
-def path_builder():
-    pass
+PATH_FIG = Path(
+    "/dados/mmclima/multimodelo/seasonal/figures"
+    )
+
+PATH_LOG = Path(
+    "/scripts/clima/denis/seasonal/src/logs"
+)
+
+PATH_GRADS = Path(
+    "/scripts/clima/denis/seasonal/src/plotting"
+)

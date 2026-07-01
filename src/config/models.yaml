@@ -149,8 +149,6 @@ bases:
       - eccc4
       - eccc5
       - bom
-      - bam
-      - echam
 
   nmme:
 
@@ -172,5 +170,3 @@ bases:
       - cansips
       - geos
       - spear
-      - bam
-      - echam

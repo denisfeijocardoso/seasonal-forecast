@@ -6,7 +6,7 @@ from datetime import date
 from typing import Any
 # import src.run.seasonal_forecast_utils as run
 from src.config.config_models import ConfigModelos
-from src.config.config_path import *
+from src.config.paths import *
 from src.verification.calibr_verif_seasonal import Calibration
 from src.verification.obs_verif_seasonal import Observation
 

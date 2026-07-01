@@ -1,7 +1,7 @@
 import xarray as xr 
-from src.config.loader import PARAMETERS_RUN
-from src.observation.observation_seasonal import Observation
-from src.hindcast.hindcast_seasonal import Hindcast
+import numpy as np
+from src.observation import Observation
+from src.hindcast import Hindcast
 
 
 def load_obs_statistics(
@@ -13,7 +13,7 @@ def load_obs_statistics(
         base,
         variable,
         month_forecast
-    ).calculate_observation_statistics()
+    ).compute_statistics()
 
 
 def load_hcst_statistics(
@@ -29,24 +29,66 @@ def load_hcst_statistics(
         variable,
         month_forecast,
         models_available
-    ).calculate_hindcast_statistics(model)
+    ).compute_statistics(model)
 
-
-def correlation_model(
-        obs_anomaly_dict: dict[str, xr.DataArray], 
-        hcst_anomaly_dict: dict[str, xr.DataArray]
-) -> dict[str, xr.DataArray]:
+def compute_anomaly_correlation(
+        obs_anomaly: xr.DataArray, 
+        hcst_anomaly: xr.DataArray
+) -> xr.DataArray:
     ''' Cálculo da correlação entre anomalia dos hindcasts e observações '''
 
-    periods = PARAMETERS_RUN["periods"]
-
-    corr_periods = {}
-
-    for period in periods:
-        corr_periods[period] = xr.corr(
-            obs_anomaly_dict[period], 
-            hcst_anomaly_dict[period], 
+    corr_period = (
+        xr.corr(
+            obs_anomaly, 
+            hcst_anomaly, 
             dim="year"
-        ).clip(min = 0)
+        )
+        .fillna(0)
+        .clip(min = 0)
+    )
 
-    return corr_periods
+    return corr_period
+
+def compute_most_likely_terciles(
+    prob_below: xr.DataArray,
+    prob_central: xr.DataArray,
+    prob_above: xr.DataArray
+) -> xr.DataArray:
+
+    probs = xr.concat(
+        [prob_below, prob_central, prob_above],
+        dim="tercile"
+    )
+
+    all_nan = probs.isnull().all(dim="tercile")
+
+    probs_filled = probs.fillna(-np.inf)
+
+    max_idx = probs_filled.argmax(dim="tercile")
+
+    max_val = probs.max(
+        dim="tercile",
+        skipna=True
+    )
+
+    prob_tercile = xr.zeros_like(max_val)
+
+    prob_tercile = xr.where(
+        max_idx == 0,
+        -max_val,
+        prob_tercile
+    )
+
+    prob_tercile = xr.where(
+        max_idx == 2,
+        max_val,
+        prob_tercile
+    )
+
+    prob_tercile = xr.where(
+        all_nan,
+        np.nan,
+        prob_tercile
+    )
+
+    return prob_tercile

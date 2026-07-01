@@ -1,12 +1,12 @@
-import numpy as np
 import xarray as xr
 from src.config.config_models import build_model_dir_name, get_dim_names
 from src.processing.data_processing import build_periods_model
-from src.config.loader import PARAMETERS_RUN
-from src.config.config_path import PATH_HCST
+from src.config.loader import get_periods_aggregation, get_climatology_period
+from src.config.paths import PATH_HCST
 
 class Hindcast:
-     
+    """Dados de previsão retrospectiva (hindcast)."""
+
     def __init__(
             self, 
             base: str, 
@@ -20,19 +20,16 @@ class Hindcast:
         self.month_hcst = month_hcst
         self.models_available = models_available
 
-        self.periods = PARAMETERS_RUN["periods"]
+        self.periods = get_periods_aggregation()
 
-    def load_hindcast_year(
+    def load_year(
         self, 
         model:str,
         year_hcst: int
     ) -> dict[str, xr.DataArray]:
         ''' Carrega os hindcasts para um determinado modelo e ano de climatologia '''
 
-        name_model = build_model_dir_name(
-            self.base,
-            model
-        )       
+        name_model = build_model_dir_name(model)       
 
         file_path = (
             PATH_HCST / 
@@ -83,18 +80,18 @@ class Hindcast:
 
             return periods_loaded
 
-    def load_hindcast_all_years(
+    def load_years_climatology(
         self, 
         model: str
     )  -> dict[str, xr.DataArray]:
         '''Carrega os hindcasts de um determinado modelo 
         e gera os agregados para todo período de climatologia'''
 
-        climatology = PARAMETERS_RUN["bases"][self.base]["climatology"]
+        start_year, end_year = get_climatology_period(self.base)
 
-        years_hcst = range(
-            climatology["start_year"], 
-            climatology["end_year"] + 1
+        years_climatology = range(
+            start_year, 
+            end_year + 1
         )
 
         periods_by_year = {
@@ -102,9 +99,9 @@ class Hindcast:
             for period in self.periods
         }
 
-        for year in years_hcst:
+        for year in years_climatology:
 
-            periods = self.load_hindcast_year(
+            periods = self.load_year(
                 model, 
                 year
             )
@@ -126,7 +123,7 @@ class Hindcast:
         return hindcast 
 
 
-    def load_hindcast_models_available(self) -> dict[str, dict[str, xr.DataArray]]:    
+    def load_available_models(self) -> dict[str, dict[str, xr.DataArray]]:    
         '''Processa os hindcasts para cada modelo da lista models_available
         para todos os períodos de agregamento'''
 
@@ -134,11 +131,11 @@ class Hindcast:
         
         for model in self.models_available: 
 
-            model_hcsts[model] = self.load_hindcast_all_years(model)
+            model_hcsts[model] = self.load_years_climatology(model)
 
         return model_hcsts
 
-    def generate_multimodel_hindcast(self) -> dict[str, xr.DataArray]:
+    def build_multimodel(self) -> dict[str, xr.DataArray]:
         '''Calcula a média multimodelo para todos os períodos de agregamento
         a partir dos modelos disponíveis na lista models_available'''  
 
@@ -147,7 +144,7 @@ class Hindcast:
                 "São necessários pelo menos 2 modelos para calcular o multimodelo."
             )
         
-        hcst_models = self.load_hindcast_models_available()
+        hcst_models = self.load_available_models()
         
         multimodel = {}
             
@@ -166,56 +163,36 @@ class Hindcast:
 
         return multimodel
 
-    def generate_hindcast(
+    def get_hindcast(
         self,
         model: str
     ):
         if model == "multimodel":
-            return self.generate_multimodel_hindcast()
+            return self.build_multimodel()
             
-        return self.load_hindcast_all_years(model)        
+        return self.load_years_climatology(model)        
 
-    def calculate_hindcast_statistics(
+    def compute_statistics(
         self, 
         model: str
     ) -> dict[str, dict[str, xr.DataArray]]:
         '''Calcula estatísticas climatológicas dos hindcasts.'''
 
-        hcst = self.generate_hindcast(model)
+        hcst = self.get_hindcast(model)
 
-        mean, std, anom = {}, {}, {}
+        hcst_statistics = {}
 
         for period, da in hcst.items():
 
-            mean[period] = da.mean("year")
-            std[period] = da.std("year")
-            anom[period] = da - mean[period]
+            mean = da.mean("year")
 
-        return {
-            "mean": mean,
-            "std": std,
-            "anom": anom
-        }
+            hcst_statistics[period] ={
+                "mean": mean,
+                "std": da.std("year"),
+                "anom": da - mean
+            }
 
-models_available = [
-    "cfsv2",
-    "spear"
-]
-
-hcst = Hindcast(
-    "nmme",
-    "prec",
-    4,
-    models_available
-)
-
-
-dict_hcst = hcst.calculate_hindcast_statistics(
-    "cfs"
-)
-
-print(dict_hcst["anom"]['mnth00'].shape)
-
+        return hcst_statistics
 
     # def mean_std_anom_hindcast_gamma(self, model):
     #     '''Calcula a média e o desvio padrão  da climatologia dos hindcasts'''

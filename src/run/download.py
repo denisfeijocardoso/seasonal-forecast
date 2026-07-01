@@ -1,16 +1,35 @@
 from src.data.download_data import download_hcstfile_nmme, download_hcstfile_copernicus
 from src.data.download_data import download_realtime_nmme, download_realtime_copernicus
+from src.config.loader import VARIABLES_CONFIG, PARAMETERS_RUN
 
+def run_download_realtime_models(
+    base: str,
+    models: list[str],
+    var: str,
+    year_fcst: int,
+    month_fcst: int
+) -> None:
 
-def run_download_forecast(
+    for model in models:
+
+        download_realtime_forecast(
+            base,
+            model,
+            var,
+            year_fcst,
+            month_fcst
+        )
+
+def download_realtime_forecast(
         base: str,
         model: str,
         var: str,
         year_fcst: int, 
         month_fcst: int, 
-    ):
-        
+    ) -> None:
+
         if base == "nmme":
+
             download_realtime_nmme(
                 year_fcst, 
                 month_fcst, 
@@ -19,6 +38,7 @@ def run_download_forecast(
             )
 
         elif base == "copernicus":
+
             download_realtime_copernicus(
                 year_fcst, 
                 month_fcst, 
@@ -30,43 +50,55 @@ def run_download_forecast(
             raise ValueError(f"Base desconhecida: {base}")
 
 
-
-def run_download_hindcast_c3s(month_fcst):
-    """ Executa o download dos hindcasts do Copernicus Climate Data Store (C3S)
-    para um mês de previsão específico.
-
-    Parâmetros
-    ----------
-    month_fcst : int Mês de inicialização da previsão (1 a 12). """
+def download_hindcast_c3s(        
+        model: str,
+        var: str,
+        month_fcst: int, 
+    ):
+    """ Executa o download dos hindcasts do Copernicus Climate Data Store (C3S),
+    para todo o período climatológico, dado um modelo, variável e mês específicos."""
     
-    models = ["ukmo", "ecmwf", "meteo_france", "dwd", "cmcc",
-        "ncep", "jma", "eccc4", "eccc5", "bom"]
-    
-    variables = ["total_precipitation","2m_temperature"]
-    
-    years = range(1993, 2017)
+    var_name_in_base = VARIABLES_CONFIG[var]["copernicus"]["variable"]
 
-    for year in years:
-        for model in models:
-            for var in variables:
-                download_hcstfile_copernicus(year, year, month_fcst, month_fcst, model, var)
-    #
+    #Define climatology
+    years_climatology = PARAMETERS_RUN["bases"]["copernicus"]["climatology"]
+    start_year = years_climatology["start_year"]
+    end_year = years_climatology["end_year"]
 
-def run_download_hindcast_nmme(init_year, end_year):
-    """ Executa o download dos hindcasts do North American Multi-Model Ensemble (NMME)
-    para um mês de previsão específico.
+    for year in range(start_year, end_year + 1):
 
-    Parâmetros
-    ----------
-    init_year : Ano de início do download (ele vai baixar todos os meses)
-    end_year : Ano de fim do período de download """
+        download_hcstfile_copernicus(
+            year, 
+            year, 
+            month_fcst, 
+            month_fcst, 
+            model, 
+            var_name_in_base
+        )
 
-    models_nmme = ["canesm5", "ccsm4", "cesm1", "cfsv2", "gem52nemo", "geos5v2", "spear"] 
-    vars_nmme = ["total_precipitation", "2m_temperature"]
-    #
-    for model in models_nmme:
-        for var in vars_nmme:
-            download_hcstfile_nmme(init_year, end_year, model, var)
-    #
+def download_hindcast_nmme(        
+        model: str,
+        var: str,
+        month_fcst: int, 
+    ):
+    """ Executa o download dos hindcasts do  North American Multi-Model Ensemble (NMME),
+    para todo o período climatológico, dado um modelo, variável e mês específicos."""
 
-    print("Interpolando os dados de previsão hindcast dos modelos para a mesma grade da observação (GPCP)")  
+    var_name_in_base = VARIABLES_CONFIG[var]["copernicus"]["variable"]
+
+    #Define climatology
+    years_climatology = PARAMETERS_RUN["bases"]["copernicus"]["climatology"]
+    start_year = years_climatology["start_year"]
+    end_year = years_climatology["end_year"]
+
+    for year in range(start_year, end_year + 1):
+
+        download_hcstfile_nmme(
+            start_year, 
+            end_year, 
+            model, 
+            var
+        )
+
+
+    # print("Interpolando os dados de previsão hindcast dos modelos para a mesma grade da observação (GPCP)")  

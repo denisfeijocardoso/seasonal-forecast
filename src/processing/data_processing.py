@@ -3,7 +3,7 @@ import xarray as xr
 import calendar
 from datetime import date
 from dateutil.relativedelta import relativedelta
-from src.config.loader import PARAMETERS_RUN
+from src.config.loader import get_periods_aggregation
 
 def select_month(
         start, 
@@ -49,7 +49,7 @@ def aggregate_season(
     
     return sum(seasonal)
 
-periods =  PARAMETERS_RUN["periods"]
+periods =  get_periods_aggregation()
 
 def build_periods_model(
         model: str,

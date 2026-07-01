@@ -1,11 +1,12 @@
 import xarray as xr
 from src.config.config_models import build_model_dir_name, get_dim_names
 from src.processing.data_processing import build_periods_model
-from src.config.loader import PARAMETERS_RUN
-from src.config.config_path import PATH_FCST
+from src.config.loader import get_periods_aggregation
+from src.config.paths import PATH_FCST
 
 class Forecast:
-     
+    """Dados de previsão em tempo-real (real-time forecast)."""
+
     def __init__(
             self, 
             base: str, 
@@ -21,18 +22,15 @@ class Forecast:
         self.month_fcst = month_fcst
         self.models_available = models_available
 
-        self.periods = PARAMETERS_RUN["periods"]
+        self.periods = get_periods_aggregation()
 
-    def load_forecast(
+    def load_data(
             self, 
             model:str
     ) -> xr.DataArray:
         ''' Carrega os dados das previsões em tempo-real para um modelo específico.'''
 
-        name_model = build_model_dir_name(
-            self.base,
-            model
-        )
+        name_model = build_model_dir_name(model)
 
         file_path = (
             PATH_FCST /
@@ -70,26 +68,26 @@ class Forecast:
 
         return da
 
-    def calculate_periods_forecast(
+    def calculate_periods(
         self,
         model: str
     ) -> dict[str, xr.DataArray]:
         '''Processa as previsões em tempo-real para um modelo específico
         para todos os períodos de acumulo/média'''
 
-        da = self.load_forecast(model)
+        da = self.load_data(model)
 
         model_fcst = build_periods_model(
                 model, 
                 self.var,
                 self.year_fcst,
-                self.month_hcst,
+                self.month_fcst,
                 da
         )
 
         return model_fcst
 
-    def load_forecast_models_available(self) -> dict[str, dict[str, xr.DataArray]]:    
+    def load_models_available(self) -> dict[str, dict[str, xr.DataArray]]:    
         '''Processa as previsões em tempo-real para cada modelo disponível
         para todos os períodos de acumulo/média'''
 
@@ -97,11 +95,11 @@ class Forecast:
         
         for model in self.models_available: 
 
-            model_fcsts[model] = self.calculate_periods_forecast(model)
+            model_fcsts[model] = self.calculate_periods(model)
 
         return model_fcsts
 
-    def generate_multimodel_forecast(self):
+    def build_multimodel(self) -> dict[str, xr.DataArray]:
         '''Calcula a média multimodelo para todos os períodos de acúmulo/media
         a partir dos modelos disponíveis'''  
 
@@ -111,7 +109,7 @@ class Forecast:
                 "São necessários pelo menos 2 modelos para calcular o multimodelo."
             )
         
-        fcst_models = self.load_forecast_models_available()
+        fcst_models = self.load_models_available()
         
         multimodel = {}
             
@@ -130,16 +128,17 @@ class Forecast:
 
         return multimodel
 
-    def generate_forecast(
+    def get_forecast(
             self,
             model: str
-    ):
+    ) -> dict[str, xr.DataArray]:
+        
         if model == "multimodel":
-            return self.generate_multimodel_forecast()
+            return self.build_multimodel()
             
-        return self.calculate_periods_forecast(model)
+        return self.calculate_periods(model)
     
-    # def get_periods_fcst(
+    # def get_periods_aggregation_fcst(
     #         self, 
     #         model: str,
     #         data: xr.DataArray,

@@ -1,11 +1,19 @@
 prec:
     copernicus:
       variable: total_precipitation
-    nmme:
+
+    nmme_opendap:
       variable: prcp
+
+    nmme_iri:
+      variable: prec
 
 t2mt:
     copernicus:
       variable: 2m_temperature
-    nmme:
+
+    nmme_opendap:
       variable: t2m
+      
+    nmme_iri:
+      variable: tref

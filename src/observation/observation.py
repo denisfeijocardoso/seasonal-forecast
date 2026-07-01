@@ -2,11 +2,12 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 import calendar
-from src.config.loader import PARAMETERS_RUN
-from src.config.config_path import PATH_OBS
+from src.config.loader import get_periods_aggregation, get_climatology_period
+from src.config.paths import PATH_OBS
 from src.processing.data_processing import build_periods_obs
 
 class Observation:
+    """Dados observacionais."""
 
     def __init__(
         self, 
@@ -18,26 +19,26 @@ class Observation:
         self.var = var
         self.month_obs = month_obs
 
-        self.periods = PARAMETERS_RUN["periods"]
+        self.periods = get_periods_aggregation()
 
         self.climatology_dates = self.get_climatology_dates()
 
     def get_climatology_dates(self) -> dict[int, list[pd.Timestamp]]:
         '''Gera um dicionário com todas as datas do período climatológico.'''
         
-        climatology = PARAMETERS_RUN["bases"][self.base]["climatology"]
+        start_year, end_year = get_climatology_period(self.base)
 
-        years = range(
-            climatology["start_year"], 
-            climatology["end_year"] + 1
+        years_climatology = range(
+            start_year, 
+            end_year + 1
         )
 
         dates_by_year = {
             year: []
-            for year in years
+            for year in years_climatology
         }
 
-        for year in years:
+        for year in years_climatology:
 
             start_date = pd.Timestamp(
                 year=year, 
@@ -53,7 +54,7 @@ class Observation:
                 
         return dates_by_year
 
-    def load_observation_year(
+    def load_year(
         self,
         year_climatology: int
     ) -> xr.DataArray:
@@ -139,7 +140,7 @@ class Observation:
     ) -> dict[str, xr.DataArray]:
         ''' Carrega os dados observados para um ano específico e calcula os períodos de agregamento. '''
 
-        data = self.load_observation_year(year_climatology)
+        data = self.load_year(year_climatology)
 
         periods = build_periods_obs(
              self.var,
@@ -184,42 +185,33 @@ class Observation:
 
         return observations
 
-
-    def calculate_observation_statistics(self) -> dict[str, dict[str, xr.DataArray]]:
+    def compute_statistics(self) -> dict[str, dict[str, xr.DataArray]]:
         '''Calcula as estatísticas climatológicas das observações.'''
 
         obs = self.calculate_periods_all_years()
 
-        total, mean, median, std, tinf, tsup, iqr, anom = (
-            {}, {}, {}, {}, {}, {}, {}, {}
-        )
+        obs_statistics = {}
 
         for period, da in obs.items():
             
-            total[period] = da
-            mean[period] = da.mean("year")
-            median[period] = da.median("year")
-            std[period] = da.std("year")
-
-            tinf[period] = da.quantile(0.33, "year")
-            tsup[period] = da.quantile(0.66, "year")
+            mean = da.mean("year")
 
             q1 = da.quantile(0.25, "year")
             q3 = da.quantile(0.75, "year")
 
-            iqr[period] = q3 - q1
 
-            anom[period] = da - mean[period]
+            obs_statistics[period] = {
+                "total": da,
+                "mean": mean,
+                "median": da.median("year"),
+                "std": da.std("year"),
+                "tinf": da.quantile(0.33, "year"),   
+                "tsup": da.quantile(0.66, "year"),
+                "iqr": q3 - q1,
+                "anom": da - mean,
+            }
 
-        return {
-            "total": total,
-            "mean": mean,
-            "std": std,
-            "tinf": tinf,   
-            "tsup": tsup,
-            "iqr": iqr,
-            "anom": anom,
-        }
+        return obs_statistics
 
     def mean_std_anom_obs_gamma(self):
         '''Calcula a média, desvio padrão e anomalia da climatologia das observações'''
@@ -238,7 +230,7 @@ class Observation:
 
             # Calcula média, desvio padrão e anomalias
             mean = np.nanmean(data_array, axis=0)
-            mediana = np.nanmedian(data_array, axis=0)
+            median = np.nanmedian(data_array, axis=0)
             variance = np.nanvar(data_array, axis=0)
             std = np.nanstd(data_array, axis=0)
             tercil_inf = np.nanpercentile(data_array, 33.33, axis=0)
@@ -247,24 +239,24 @@ class Observation:
             quartil_sup = np.nanpercentile(data_array, 75, axis=0) 
             iqr_obs =  quartil_sup - quartil_inf         
             obs_total = data_array      
-            anomalias = obs_total - mean     
+            anomaly = obs_total - mean     
 
             # Armazena os resultados
             stats[label] = {
                 'total': obs_total,
                 'mean': mean,      
-                'mediana': mediana,
+                'median': median,
                 'variance': variance,   
                 'std': std,        
-                'anomaly': anomalias,   
-                'tercilinf': tercil_inf,
-                'tercilsup': tercil_sup,
-                "intqobs": iqr_obs
+                'anomaly': anomaly,   
+                'tercinf': tercil_inf,
+                'tercsup': tercil_sup,
+                "iqr": iqr_obs
             }
 
         return stats
 
-# def get_periods_obs(
+# def get_periods_aggregation_obs(
 #         self, 
 #         data: xr.DataArray
 # ) -> dict[str, xr.DataArray]:
@@ -293,17 +285,4 @@ class Observation:
 #             )        
 
 #     return periods_obs
-    
-obs = Observation(
-    "nmme",
-    "prec",
-    5
-)
-
-
-
-dict_obs = obs.calculate_observation_statistics()
-
-print(dict_obs["anom"]['mnth00'].shape)
-
 

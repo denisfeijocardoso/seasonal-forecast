@@ -6,9 +6,9 @@ import matplotlib.pyplot as plt
 from scipy.io import netcdf_file
 from netCDF4 import Dataset
 from scipy.stats import linregress
-from src.forecast.forecast_seasonal import Forecast
-from src.hindcast.hindcast_seasonal import Hindcast
-from src.observation.observation_seasonal import Observation
+from src.forecast.forecast import Forecast
+from src.hindcast.hindcast import Hindcast
+from src.observation.observation import Observation
 
 ##############
 #SCATTER PLOT#
