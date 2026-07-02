@@ -185,7 +185,10 @@ class Observation:
 
         return observations
 
-    def compute_statistics(self) -> dict[str, dict[str, xr.DataArray]]:
+    def compute_statistics(
+        self,
+        exclude_year: int | None = None
+    ) -> dict[str, dict[str, xr.DataArray]]:
         '''Calcula as estatísticas climatológicas das observações.'''
 
         obs = self.calculate_periods_all_years()
@@ -193,22 +196,30 @@ class Observation:
         obs_statistics = {}
 
         for period, da in obs.items():
-            
-            mean = da.mean("year")
 
-            q1 = da.quantile(0.25, "year")
-            q3 = da.quantile(0.75, "year")
+            climatology = da
+
+            if exclude_year is not None:
+                climatology = da.drop_sel(
+                    year=exclude_year,
+                    errors="ignore"
+                )
+            
+            mean = climatology.mean("year")
+
+            q1 = climatology.quantile(0.25, "year")
+            q3 = climatology.quantile(0.75, "year")
 
 
             obs_statistics[period] = {
-                "total": da,
+                "total": climatology,
                 "mean": mean,
-                "median": da.median("year"),
-                "std": da.std("year"),
-                "tinf": da.quantile(0.33, "year"),   
-                "tsup": da.quantile(0.66, "year"),
+                "median": climatology.median("year"),
+                "std": climatology.std("year"),
+                "tinf": climatology.quantile(0.33, "year"),   
+                "tsup": climatology.quantile(0.66, "year"),
                 "iqr": q3 - q1,
-                "anom": da - mean,
+                "anom": climatology - mean,
             }
 
         return obs_statistics
@@ -285,4 +296,3 @@ class Observation:
 #             )        
 
 #     return periods_obs
-

@@ -102,6 +102,113 @@ def write_results_netcdf(
 
                 logging.info(f"Arquivo gerado - {year_fcst} {month_fcst}: {file_path}")
 
+
+def write_observation_statistics_netcdf(
+        obs_statistics: dict[str, dict[str, xr.DataArray]],
+        base: str,
+        model: str,
+        var: str,
+        type_calibration: str,
+        year_fcst: int,
+        month_fcst: int,
+) -> None:
+    """
+    Salva estatísticas observacionais necessárias para as curvas do multimodelo.
+    """
+
+    if model != "multimodel":
+        return
+
+    if type_calibration not in {"regr", "cox"}:
+        return
+
+    output_path = build_output_path(
+        base=base,
+        model=model,
+        type_calibration=type_calibration,
+        year_fcst=year_fcst,
+        month_fcst=month_fcst,
+    )
+
+    output_path.mkdir(
+        parents=True,
+        exist_ok=True
+    )
+
+    name_model_dir = build_model_dir_name(model)
+    fcst_date = f"{year_fcst}{month_fcst:02d}0100"
+    period_dates = compute_period_names(
+        year_fcst,
+        month_fcst
+    )
+    calibration = f"calibrated_{type_calibration}_"
+
+    product_map = {
+        "obsmean": "mean",
+        "obsstd": "std",
+        "obsmedian": "median",
+        "obsiqr": "iqr",
+        "obstotal": "total",
+        "obstercinf": "tinf",
+        "obstercsup": "tsup",
+    }
+
+    for period, period_statistics in obs_statistics.items():
+        for product_name, statistic_name in product_map.items():
+            if statistic_name not in period_statistics:
+                continue
+
+            data = period_statistics[statistic_name]
+            file_name = (
+                f"fcst_"
+                f"{var}_"
+                f"{product_name}_"
+                f"{period}_"
+                f"{name_model_dir}_"
+                f"{calibration}"
+                f"{fcst_date}.nc"
+            )
+
+            file_path = output_path / file_name
+
+            ds = build_dataset(
+                data,
+                product_name
+            )
+
+            ds = add_global_attributes(
+                ds,
+                base,
+                model,
+                var,
+                type_calibration,
+                year_fcst,
+                month_fcst,
+            )
+
+            ds = add_products_attributes(ds)
+
+            ds.attrs["description"] = (
+                f"{product_name} generated from observational climatology"
+            )
+
+            ds.attrs["source"] = "observational climatology"
+
+            ds.attrs["history"] = (
+                f"Issued: {period_dates['mnth00'].upper()} "
+                f"For: {period_dates[period].upper()}"
+            )
+
+            ds.to_netcdf(file_path)
+
+            logging.info(
+                "Arquivo observacional gerado - %s %s: %s",
+                year_fcst,
+                month_fcst,
+                file_path,
+            )
+
+
 def build_dataset(
     data: xr.DataArray,
     product_name: str,
@@ -161,7 +268,7 @@ def add_global_attributes(
 
         "forecast_month": month_fcst,
 
-        "institution": "MMClima",
+        "institution": "CPTEC/INPE",
 
     }
 
@@ -219,6 +326,107 @@ def add_products_attributes(
         "percentilemm": {
             "long_name": "Forecast precipitation percentile value",
             "units": "mm"
+        },
+
+        "obsmean": {
+            "long_name": "Observed climatological mean"
+        },
+
+        "obsstd": {
+            "long_name": "Observed climatological standard deviation"
+        },
+
+        "obsmedian": {
+            "long_name": "Observed climatological median"
+        },
+
+        "obsiqr": {
+            "long_name": "Observed climatological interquartile range"
+        },
+
+        "obstotal": {
+            "long_name": "Observed climatological values"
+        },
+
+        "obstercinf": {
+            "long_name": "Observed climatological lower tercile"
+        },
+
+        "obstercsup": {
+            "long_name": "Observed climatological upper tercile"
+        },
+
+        # ------------------------
+        # Verificação
+        # ------------------------
+
+        "corskill": {
+            "long_name": "Anomaly correlation skill",
+            "units": "1"
+        },
+
+        "mssskill": {
+            "long_name": "Mean squared skill score",
+            "units": "1"
+        },
+
+        "msssfase": {
+            "long_name": "MSSS phase component",
+            "units": "1"
+        },
+
+        "msssamplitude": {
+            "long_name": "MSSS amplitude component",
+            "units": "1"
+        },
+
+        "bias": {
+            "long_name": "Forecast bias"
+        },
+
+        "arocmed": {
+            "long_name": "Area under ROC curve for positive anomaly",
+            "units": "1"
+        },
+
+        "aroctinf": {
+            "long_name": "Area under ROC curve for lower tercile",
+            "units": "1"
+        },
+
+        "aroctsup": {
+            "long_name": "Area under ROC curve for upper tercile",
+            "units": "1"
+        },
+
+        "probmed": {
+            "long_name": "Forecast probability for positive anomaly",
+            "units": "1"
+        },
+
+        "probtinf": {
+            "long_name": "Forecast probability for lower tercile",
+            "units": "1"
+        },
+
+        "probtsup": {
+            "long_name": "Forecast probability for upper tercile",
+            "units": "1"
+        },
+
+        "binobsmed": {
+            "long_name": "Observed binary event for positive anomaly",
+            "units": "1"
+        },
+
+        "binobstinf": {
+            "long_name": "Observed binary event for lower tercile",
+            "units": "1"
+        },
+
+        "binobstsup": {
+            "long_name": "Observed binary event for upper tercile",
+            "units": "1"
         },
 
         # ------------------------

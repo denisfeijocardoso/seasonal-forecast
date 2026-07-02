@@ -22,6 +22,28 @@ class Hindcast:
 
         self.periods = get_periods_aggregation()
 
+    def _standardize_dims(
+        self,
+        da: xr.DataArray,
+        model: str,
+        keep_member: bool = False
+    ) -> xr.DataArray:
+
+        dims = get_dim_names(self.base, model)
+
+        rename_dims = {}
+
+        if dims["lat"] in da.dims:
+            rename_dims[dims["lat"]] = "lat"
+
+        if dims["lon"] in da.dims:
+            rename_dims[dims["lon"]] = "lon"
+
+        if keep_member and dims["member"] in da.dims:
+            rename_dims[dims["member"]] = "member"
+
+        return da.rename(rename_dims)
+
     def load_year(
         self, 
         model:str,
@@ -64,6 +86,64 @@ class Hindcast:
                 and model not in ("bam12","echam")
             ): 
                 da = (da * 1000  * 86400)
+
+            da = self._standardize_dims(da, model)
+
+            periods = build_periods_model(
+                model, 
+                self.var,
+                year_hcst,
+                self.month_hcst,
+                da
+            )
+
+            periods_loaded = {
+                k: y.load()
+                for k,y in periods.items()
+            }
+
+            return periods_loaded
+
+    def load_year_members(
+        self, 
+        model: str,
+        year_hcst: int
+    ) -> dict[str, xr.DataArray]:
+        '''Carrega hindcast mantendo a dimensão dos membros.'''
+
+        name_model = build_model_dir_name(model)       
+
+        file_path = (
+            PATH_HCST / 
+            self.base / 
+            name_model/
+            str(year_hcst)/
+            f"{self.var}_monthly_{name_model}_hcst_interp_{year_hcst}{self.month_hcst:02d}01.nc"
+        )
+
+        with xr.open_dataset(file_path, decode_times=False) as ds:
+            ds = ds.squeeze()
+
+            if len(ds.data_vars) != 1:
+                raise ValueError(
+                    f"Esperava 1 variável, encontrei {list(ds.data_vars)}"
+                )
+
+            var_name = next(iter(ds.data_vars))
+            da = ds[var_name]
+
+            if (
+                self.base == "copernicus" 
+                and self.var == "prec"
+                and model not in ("bam12", "echam")
+            ): 
+                da = da * 1000 * 86400
+
+            da = self._standardize_dims(
+                da,
+                model,
+                keep_member=True
+            )
 
             periods = build_periods_model(
                 model, 
@@ -122,6 +202,53 @@ class Hindcast:
 
         return hindcast 
 
+    def load_years_climatology_members(
+        self,
+        model: str
+    ) -> dict[str, xr.DataArray]:
+        '''Carrega hindcasts com membros para todo o período climatológico.'''
+
+        start_year, end_year = get_climatology_period(self.base)
+
+        years_climatology = range(
+            start_year, 
+            end_year + 1
+        )
+
+        periods_by_year = {
+            period: []
+            for period in self.periods
+        }
+
+        for year in years_climatology:
+
+            periods = self.load_year_members(
+                model, 
+                year
+            )
+
+            for period, da in periods.items():
+
+                if model == "cfs" and "member" in da.dims:
+                    da = da.isel(member=slice(0, 24))
+
+                if model == "geos" and "member" in da.dims:
+                    da = da.isel(member=slice(0, 4))
+                
+                da = da.expand_dims(year=[year])
+                periods_by_year[period].append(da)
+
+        hindcast = {}
+
+        for period, das in periods_by_year.items():
+
+            hindcast[period] = xr.concat(
+                das,
+                dim="year"
+            )
+
+        return hindcast
+
 
     def load_available_models(self) -> dict[str, dict[str, xr.DataArray]]:    
         '''Processa os hindcasts para cada modelo da lista models_available
@@ -172,9 +299,47 @@ class Hindcast:
             
         return self.load_years_climatology(model)        
 
+    def get_hindcast_target(
+        self,
+        model: str,
+        target_year: int
+    ) -> dict[str, xr.DataArray]:
+
+        if model == "multimodel":
+            hcst_models = {}
+
+            for available_model in self.models_available:
+                hcst_models[available_model] = self.load_year(
+                    available_model,
+                    target_year
+                )
+
+            target = {}
+
+            for period in self.periods:
+
+                arrays = [
+                    hcst_models[available_model][period]
+                    .expand_dims(model=[available_model])
+                    for available_model in self.models_available
+                ]
+
+                target[period] = (
+                    xr.concat(arrays, dim="model")
+                    .mean(dim="model", skipna=True)
+                )
+
+            return target
+
+        return self.load_year(
+            model,
+            target_year
+        )
+
     def compute_statistics(
         self, 
-        model: str
+        model: str,
+        exclude_year: int | None = None
     ) -> dict[str, dict[str, xr.DataArray]]:
         '''Calcula estatísticas climatológicas dos hindcasts.'''
 
@@ -184,12 +349,20 @@ class Hindcast:
 
         for period, da in hcst.items():
 
-            mean = da.mean("year")
+            climatology = da
+
+            if exclude_year is not None:
+                climatology = da.drop_sel(
+                    year=exclude_year,
+                    errors="ignore"
+                )
+
+            mean = climatology.mean("year")
 
             hcst_statistics[period] ={
                 "mean": mean,
-                "std": da.std("year"),
-                "anom": da - mean
+                "std": climatology.std("year"),
+                "anom": climatology - mean
             }
 
         return hcst_statistics

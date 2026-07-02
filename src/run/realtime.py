@@ -17,7 +17,10 @@ def run_realtime_forecast(
     year_fcst: int, 
     month_fcst: int,
     models_available: list[str]
-) -> dict[str, dict[str, dict[str, xr.DataArray]]]:
+) -> tuple[
+    dict[str, dict[str, dict[str, xr.DataArray]]],
+    dict[str, dict[str, xr.DataArray]],
+]:
 
     # ------------------
     # Read data
@@ -76,4 +79,4 @@ def run_realtime_forecast(
         "nocalib": results_no_calibration
     }
 
-    return results
+    return results, obs_statistics

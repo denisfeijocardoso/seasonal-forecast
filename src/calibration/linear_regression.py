@@ -25,10 +25,14 @@ def compute_calibration(
     hcst_mean = hcst_stats["mean"]
     hcst_std = hcst_stats["std"]
     
-    realtime_forecast = realtime_forecast.rename({
-        "Y": "lat",
-        "X": "lon"
-    })
+    rename_dims = {
+        dim: name
+        for dim, name in {"Y": "lat", "X": "lon"}.items()
+        if dim in realtime_forecast.dims
+    }
+
+    if rename_dims:
+        realtime_forecast = realtime_forecast.rename(rename_dims)
     
     forecast_anomaly = realtime_forecast - hcst_mean
 

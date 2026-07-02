@@ -4,8 +4,8 @@ function main(args)
 
 tools='/scripts/subsaz/tools/'
 
-**grads -lbc "run verif_maps_seasonal_models.gs 2026020100 FEB v1 nmme prec regr"
-**grads -lbc "run verif_maps_seasonal_models.gs 2025020100 FEB v1 nmme prec nocalib"
+**grads -lbc "run verif_maps_seasonal_models.gs 2026020100 FEB cfs2 CFSv2 1 nmme prec regr"
+**grads -lbc "run verif_maps_seasonal_models.gs 2025020100 FEB cfs2 CFSv2 1 nmme prec nocalib"
 **grads -lbc "run verif_maps_seasonal_models.gs 2025020100 FEB canesm5 CanESM5 v1 nmme prec nocalib"
 ***********DATE****************
 anomesdiahora=subwrd(args,1)
@@ -30,6 +30,9 @@ say model_title
 
 ********VERSÃO MULTIMODELO**********
 version=subwrd(args,5)
+if(substr(version,1,1) != 'v')
+    version='v' % version
+endif
 say version
 ***********************************
 
@@ -142,6 +145,14 @@ while (incrproi<=incrprof)
             'q attr'
 
             linha = sublin(result, 5)
+            nlinha = 1
+            while (nlinha <= 200)
+                linha_attr = sublin(result, nlinha)
+                if (subwrd(linha_attr, 3) = 'history')
+                    linha = linha_attr
+                endif
+                nlinha = nlinha + 1
+            endwhile
             say 'Arquivo aberto: ' % linha
             
             mes_init = subwrd(linha, 5)

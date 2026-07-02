@@ -4,8 +4,8 @@ function main(args)
 
 tools='/scripts/subsaz/tools/'
 
-**grads -lbc "run verif_maps_seasonal_multimodel.gs 2026020100 FEB v1 nmme prec regr"
-**grads -lbc "run verif_maps_seasonal_multimodel.gs 2025020100 FEB v1 nmme prec nocalib"
+**grads -lbc "run verif_maps_seasonal_multimodel.gs 2026020100 FEB 1 nmme prec regr"
+**grads -lbc "run verif_maps_seasonal_multimodel.gs 2025020100 FEB 1 nmme prec nocalib"
 ***********DATE****************
 anomesdiahora=subwrd(args,1)
 anomesdia= substr(anomesdiahora,1,8)
@@ -21,6 +21,9 @@ namemonth=subwrd(args,2)
 
 ********VERSÃO MULTIMODELO**********
 version=subwrd(args,3)
+if(substr(version,1,1) != 'v')
+    version='v' % version
+endif
 say version
 ***********************************
 
@@ -130,6 +133,14 @@ while (incrproi<=incrprof)
             'q attr'
 
             linha = sublin(result, 5)
+            nlinha = 1
+            while (nlinha <= 200)
+                linha_attr = sublin(result, nlinha)
+                if (subwrd(linha_attr, 3) = 'history')
+                    linha = linha_attr
+                endif
+                nlinha = nlinha + 1
+            endwhile
             say 'Arquivo aberto: ' % linha
             
             mes_init = subwrd(linha, 5)
@@ -369,13 +380,13 @@ while (incrproi<=incrprof)
 
             if (base = 'copernicus')
                 if (calibration = 'nocalib')
-                    fileout = "cs3_" % model % "_nocalib_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
+                    fileout = "c3s_" % model % "_nocalib_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
                 endif
                 if (calibration = 'regr')
-                    fileout = "cs3_" % model % "_regr_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
+                    fileout = "c3s_" % model % "_regr_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
                 endif
                 if (calibration = 'cox')
-                    fileout = "cs3_" % model % "_cox_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
+                    fileout = "c3s_" % model % "_cox_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
                 endif           
             endif
 
@@ -416,13 +427,13 @@ while (incrproi<=incrprof)
 
             if (base = 'copernicus')
                 if (calibration = 'nocalib')
-                    fileout = "cs3_" % model % "_nocalib_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
+                    fileout = "c3s_" % model % "_nocalib_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
                 endif
                 if (calibration = 'regr')
-                    fileout = "cs3_" % model % "_regr_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
+                    fileout = "c3s_" % model % "_regr_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
                 endif
                 if (calibration = 'cox')
-                    fileout = "cs3_" % model % "_cox_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
+                    fileout = "c3s_" % model % "_cox_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
                 endif           
             endif 
 
@@ -460,13 +471,13 @@ while (incrproi<=incrprof)
 
             if (base = 'copernicus')
                 if (calibration = 'nocalib')
-                    fileout = "cs3_" % model % "_nocalib_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
+                    fileout = "c3s_" % model % "_nocalib_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
                 endif
                 if (calibration = 'regr')
-                    fileout = "cs3_" % model % "_regr_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
+                    fileout = "c3s_" % model % "_regr_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
                 endif
                 if (calibration = 'cox')
-                    fileout = "cs3_" % model % "_cox_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
+                    fileout = "c3s_" % model % "_cox_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
                 endif           
             endif
             'run ' % tools % '/' % reg
@@ -502,13 +513,13 @@ while (incrproi<=incrprof)
 
             if (base = 'copernicus')
                 if (calibration = 'nocalib')
-                    fileout = "cs3_" % model % "_nocalib_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
+                    fileout = "c3s_" % model % "_nocalib_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
                 endif
                 if (calibration = 'regr')
-                    fileout = "cs3_" % model % "_regr_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
+                    fileout = "c3s_" % model % "_regr_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
                 endif
                 if (calibration = 'cox')
-                    fileout = "cs3_" % model % "_cox_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
+                    fileout = "c3s_" % model % "_cox_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
                 endif           
             endif
             'run ' % tools % '/' % reg
@@ -544,13 +555,13 @@ while (incrproi<=incrprof)
 
             if (base = 'copernicus')
                 if (calibration = 'nocalib')
-                    fileout = "cs3_" % model % "_nocalib_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
+                    fileout = "c3s_" % model % "_nocalib_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
                 endif
                 if (calibration = 'regr')
-                    fileout = "cs3_" % model % "_regr_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
+                    fileout = "c3s_" % model % "_regr_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
                 endif
                 if (calibration = 'cox')
-                    fileout = "cs3_" % model % "_cox_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
+                    fileout = "c3s_" % model % "_cox_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
                 endif           
             endif                 
             'run ' % tools % '/' % reg
@@ -586,13 +597,13 @@ while (incrproi<=incrprof)
 
             if (base = 'copernicus')
                 if (calibration = 'nocalib')
-                    fileout = "cs3_" % model % "_nocalib_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
+                    fileout = "c3s_" % model % "_nocalib_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
                 endif
                 if (calibration = 'regr')
-                    fileout = "cs3_" % model % "_regr_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
+                    fileout = "c3s_" % model % "_regr_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
                 endif
                 if (calibration = 'cox')
-                    fileout = "cs3_" % model % "_cox_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
+                    fileout = "c3s_" % model % "_cox_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
                 endif           
             endif                     
             'run ' % tools % '/' % reg
@@ -628,13 +639,13 @@ while (incrproi<=incrprof)
 
             if (base = 'copernicus')
                 if (calibration = 'nocalib')
-                    fileout = "cs3_" % model % "_nocalib_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
+                    fileout = "c3s_" % model % "_nocalib_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
                 endif
                 if (calibration = 'regr')
-                    fileout = "cs3_" % model % "_regr_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
+                    fileout = "c3s_" % model % "_regr_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
                 endif
                 if (calibration = 'cox')
-                    fileout = "cs3_" % model % "_cox_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
+                    fileout = "c3s_" % model % "_cox_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
                 endif           
             endif                      
             'run ' % tools % '/' % reg
@@ -669,13 +680,13 @@ while (incrproi<=incrprof)
 
             if (base = 'copernicus')
                 if (calibration = 'nocalib')
-                    fileout = "cs3_" % model % "_nocalib_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
+                    fileout = "c3s_" % model % "_nocalib_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
                 endif
                 if (calibration = 'regr')
-                    fileout = "cs3_" % model % "_regr_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
+                    fileout = "c3s_" % model % "_regr_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
                 endif
                 if (calibration = 'cox')
-                    fileout = "cs3_" % model % "_cox_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
+                    fileout = "c3s_" % model % "_cox_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
                 endif           
             endif                          
             'run ' % tools % '/' % reg
@@ -711,13 +722,13 @@ while (incrproi<=incrprof)
 
             if (base = 'copernicus')
                 if (calibration = 'nocalib')
-                    fileout = "cs3_" % model % "_nocalib_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
+                    fileout = "c3s_" % model % "_nocalib_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
                 endif
                 if (calibration = 'regr')
-                    fileout = "cs3_" % model % "_regr_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
+                    fileout = "c3s_" % model % "_regr_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
                 endif
                 if (calibration = 'cox')
-                    fileout = "cs3_" % model % "_cox_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
+                    fileout = "c3s_" % model % "_cox_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
                 endif           
             endif                        
             'run ' % tools % '/' % reg
@@ -752,13 +763,13 @@ while (incrproi<=incrprof)
 
             if (base = 'copernicus')
                 if (calibration = 'nocalib')
-                    fileout = "cs3_" % model % "_nocalib_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
+                    fileout = "c3s_" % model % "_nocalib_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
                 endif
                 if (calibration = 'regr')
-                    fileout = "cs3_" % model % "_regr_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
+                    fileout = "c3s_" % model % "_regr_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
                 endif
                 if (calibration = 'cox')
-                    fileout = "cs3_" % model % "_cox_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
+                    fileout = "c3s_" % model % "_cox_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
                 endif           
             endif                         
             'run ' % tools % '/' % reg
@@ -794,13 +805,13 @@ while (incrproi<=incrprof)
 
             if (base = 'copernicus')
                 if (calibration = 'nocalib')
-                    fileout = "cs3_" % model % "_nocalib_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
+                    fileout = "c3s_" % model % "_nocalib_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
                 endif
                 if (calibration = 'regr')
-                    fileout = "cs3_" % model % "_regr_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
+                    fileout = "c3s_" % model % "_regr_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
                 endif
                 if (calibration = 'cox')
-                    fileout = "cs3_" % model % "_cox_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
+                    fileout = "c3s_" % model % "_cox_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
                 endif           
             endif                         
             'set gxout shaded'
@@ -837,13 +848,13 @@ while (incrproi<=incrprof)
 
             if (base = 'copernicus')
                 if (calibration = 'nocalib')
-                    fileout = "cs3_" % model % "_nocalib_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
+                    fileout = "c3s_" % model % "_nocalib_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
                 endif
                 if (calibration = 'regr')
-                    fileout = "cs3_" % model % "_regr_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
+                    fileout = "c3s_" % model % "_regr_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
                 endif
                 if (calibration = 'cox')
-                    fileout = "cs3_" % model % "_cox_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
+                    fileout = "c3s_" % model % "_cox_" % metname % "_" % namevar % "_" % plt % lt % "_" % namemonth % "_" % reg
                 endif           
             endif                             
             'set gxout shaded'

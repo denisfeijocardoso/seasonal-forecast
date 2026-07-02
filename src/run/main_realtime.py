@@ -1,247 +1,351 @@
 import argparse
 import logging
-from .realtime import run_realtime_forecast
+
 from .download import run_download_realtime_models
+from .grads import run_grads_maps_realtime
 from .interpolation import run_interpolation_forecast_models
-from src.io.netcdf_writer import write_results_netcdf
-from src.config.config_models import check_models, get_list_models
-from src.config.loader import PARAMETERS_RUN, MODELS_CONFIG
+from .realtime import run_realtime_forecast
 from src.config.config_logging import setup_logging
-
-
-
-# --------------------------------------------
-# Argumentos (recebidos na execução do módulo)
-# --------------------------------------------
-
-parser = argparse.ArgumentParser(description="Rodar geração das previsões sazonais em tempo-real.")
-parser.add_argument("--year", type=int, required=True)
-parser.add_argument("--month", type=int, required=True)
-
-args = parser.parse_args()
-
-year_fcst = args.year
-month_fcst = args.month
-
-# --------------------
-# Configuração do Log
-# --------------------
-
-setup_logging(
-    year_fcst,
-    month_fcst
+from src.config.config_models import check_models, get_list_models
+from src.config.loader import PARAMETERS_RUN
+from src.io.realtime_writer import (
+    write_observation_statistics_netcdf,
+    write_results_netcdf,
 )
-
-logger = logging.getLogger(__name__)
-
-logger.info(
-    "Processando previsão de %d/%d", 
-    year_fcst, 
-    month_fcst
-)
-
-# -------------
-# Parâmetros
-# -------------
-
-data_bases = PARAMETERS_RUN["bases"]
-variables = PARAMETERS_RUN["variables"]
-types_calibration = PARAMETERS_RUN["calibrations"]
-model_target = "cfs"
-var = variables[0]
-base = "nmme"
-
-# ------------------------------------
-# Download das previsões em tempo-real
-# ------------------------------------
-models = list(get_list_models(base))
-
-no_download_models = {"cansips", "bam", "echam"}
-
-models_to_download = [
-    model
-    for model in models
-    if model not in no_download_models
-]
-
-run_download_realtime_models(
-    base,
-    models_to_download,
-    var,
-    year_fcst,
-    month_fcst
-)
+from src.plotting import run_python_maps_realtime
 
 
-# --------------------------------------
-# Checa quais modelos estão disponíveis
-# --------------------------------------
-
-models_available = check_models(
-    base,
-    var,
-    year_fcst,
-    month_fcst
-)
-
-print("Modelos disponíveis: ", models_available)
-
-# -----------------------------------------------
-# Interpola os arquivos baixados p/ grade do GPCP
-# -----------------------------------------------
-
-run_interpolation_forecast_models(
-    base,
-    models_available,
-    var,
-    year_fcst,
-    month_fcst
-)
+NO_DOWNLOAD_MODELS = {
+    "cansips",
+    "bam",
+    "echam",
+}
 
 
-# ---------------------------------
-# Executa a geração dos resultados
-# --------------------------------
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Rodar geração das previsões sazonais em tempo-real."
+    )
 
-results = run_realtime_forecast(
-    base,
-    model_target,
-    var,
-    year_fcst, 
-    month_fcst,
-    models_available
-)
+    parser.add_argument("--base", type=str, default="nmme")
+    parser.add_argument("--year", type=int, required=True)
+    parser.add_argument("--month", type=int, required=True)
+    parser.add_argument("--var", type=str, default=None)
+    parser.add_argument("--model", type=str, default="all")
+    parser.add_argument("--calibration", type=str, default="all")
 
+    parser.add_argument(
+        "--include-multimodel",
+        action="store_true",
+        help="Inclui o multimodelo junto com os modelos individuais.",
+    )
 
-results_cox = results["cox"]
+    parser.add_argument(
+        "--skip-download",
+        action="store_true",
+        help="Pula o download dos arquivos de previsão.",
+    )
 
-results_regr = results["regr"]
+    parser.add_argument(
+        "--skip-interpolation",
+        action="store_true",
+        help="Pula a interpolação dos arquivos de previsão.",
+    )
 
-results_nocalib = results["nocalib"]
-
-# -----------------------------
-# Escreve os arquivos NetCDF
-# ----------------------------
-
-write_results_netcdf(
-    results_cox,
-    base,
-    model_target,
-    var,
-    "cox",
-    year_fcst,
-    month_fcst
-)
-
-write_results_netcdf(
-    results_regr,
-    base,
-    model_target,
-    var,
-    "regr",
-    year_fcst,
-    month_fcst
-)
-
-write_results_netcdf(
-    results_nocalib,
-    base,
-    model_target,
-    var,
-    "nocalib",
-    year_fcst,
-    month_fcst
-)
-
-# list_models = MODELS_CONFIG["bases"][base]["models"]
-
-# for model in list_models:
-
-
-
-# #================================================#
-# # Executa o processo que baixa, interpola e gera #
-# # as previsões sazonais calibradas em tempo-real #
-# #   para o multimodelo e modelos individuais     #
-# #================================================#
-# varis = ["prec", "t2mt"]
-# bases = ["nmme", "copernicus"]
-# calibs = ["regr","cox","nocalib"]
-
-# inicio = time.time()  # <<< Início da contagem
-
-# ##=============================================================##
-# ##GERAÇÃO DOS ARQUIVOS NETCDF DAS PREVISÕES SAZONAIS CALIBRADAS##
-# ##=============================================================##
-# for base in bases:
-#     for var in varis:
-#         Run.run_realtime_seasonal(year_fcst, month_fcst, base, var)
-
-# #===================================================#
-# #CRIAÇÃO DOS MAPAS DAS PREVISÕES SAZONAIS CALIBRADAS#
-# #===================================================#
-
-# for base in bases:
-
-#     version_multimodel = ConfigModelos.get_multimodel_version(base)
-
-#     for var in varis:   
+    parser.add_argument(
+        "--skip-products",
+        action="store_true",
+        help=(
+            "Pula o cálculo dos produtos e a escrita dos netCDFs, "
+            "rodando apenas a geração dos mapas."
+        ),
+    )
     
-#         #------CHECA QUAIS MODELOS ESTÃO DISPONÍVES (SE OS ARQUIVOS FORAM BAIXADOS)-----#
-#         models_available = Calibration.check_models(base, path_fcst, year_fcst, month_fcst, var)
-# #        models_to_run = ["multimodel"] + models_available    
-#         models_to_run = models_available   
+    parser.add_argument(
+        "--maps",
+        choices=("python", "grads", "none"),
+        default="python",
+        help="Backend usado para gerar mapas.",
+    )
 
-#         print(f"Modelos disponíveis (forecast): {models_available}")
-
-#         #-----RODA OS SCRIPTS GRADS------#
-#         for model in models_to_run:
-
-#             if model != "multimodel":
-#                 if base == "copernicus":
-#                     name_model_dir = ConfigModelos.get_model_dir_c3s(model)
-
-#                 elif base == "nmme":
-#                     name_model_dir = ConfigModelos.get_model_dir_nmme(model)
-#             else:
-#                 name_model_dir = "multimodel"
-
-#             for calib in calibs:
-
-#                 path_fcst_nc = (
-#                     f"/dados/mmclima/multimodelo/seasonal/posproc/{base}/"
-#                     f"{version_multimodel}/forecast/{calib}/{name_model_dir}/"
-#                     f"{year_fcst}/{year_fcst}{month_str}0100/")
-
-#                 pattern_files = os.path.join(path_fcst_nc,
-#                     f"fcst_{var}*{name_model_dir}*{calib}_{year_fcst}{month_str}0100.nc")
-
-#                 print(f"fcst_{var}*{name_model_dir}*{calib}_{year_fcst}{month_str}0100.nc")
-
-#                 files = glob.glob(pattern_files)
-
-#                 if files:
-#                     Run.run_grads_maps_seasonal(year_fcst, month_fcst, base, model, var, calib)
-#                 else:
-#                     print(f"Arquivos NetCDF das previsões sazonais ({name_model_dir} - {var} - {calib}) não foram gerados.")
-
-# #================================================================#
-# #CRIAÇÃO DAS CURVAS DE DISTRIBUIÇÃO PARA CADA PONTO SOBRE O GLOBO#
-# #================================================================#
-# calibs = ["regr","cox"]
-
-# fcst_date = f"{year_fcst}{month_str}01"
-
-# for base in bases:
-
-#     for calib in calibs:   
-
-#         Curves.create_curves(fcst_date, base, "multimodel", calib)   
+    return parser.parse_args()
 
 
-# fim = time.time()  # <<< Fim da contagem
-# print(f"Tempo total: {(fim - inicio)/60:.2f} minutos")
+def select_variables(var: str | None) -> list[str]:
+    if var is None:
+        return list(PARAMETERS_RUN["variables"])
+
+    if var not in PARAMETERS_RUN["variables"]:
+        raise ValueError(f"Variável inválida: {var}")
+
+    return [var]
 
 
+def select_calibrations(calibration: str) -> list[str]:
+    if calibration == "all":
+        return list(PARAMETERS_RUN["calibrations"])
+
+    if calibration not in PARAMETERS_RUN["calibrations"]:
+        raise ValueError(f"Calibração inválida: {calibration}")
+
+    return [calibration]
 
 
+def validate_model_arg(
+    model_arg: str,
+    configured_models: list[str],
+) -> None:
+    if model_arg in {"all", "multimodel"}:
+        return
+
+    if model_arg not in configured_models:
+        raise ValueError(
+            f"Modelo inválido para esta base: {model_arg!r}. "
+            f"Modelos configurados: {configured_models}"
+        )
+
+
+def select_models_to_download(
+    model_arg: str,
+    configured_models: list[str],
+    include_multimodel: bool,
+) -> list[str]:
+    if model_arg in {"all", "multimodel"} or include_multimodel:
+        return [
+            model
+            for model in configured_models
+            if model not in NO_DOWNLOAD_MODELS
+        ]
+
+    if model_arg in NO_DOWNLOAD_MODELS:
+        return []
+
+    return [model_arg]
+
+
+def select_models_to_interpolate(
+    model_arg: str,
+    models_available: list[str],
+    include_multimodel: bool,
+) -> list[str]:
+    if model_arg in {"all", "multimodel"} or include_multimodel:
+        return list(models_available)
+
+    if model_arg not in models_available:
+        raise ValueError(
+            f"Modelo {model_arg!r} não está disponível para esta rodada. "
+            f"Disponíveis: {models_available}"
+        )
+
+    return [model_arg]
+
+
+def select_models_to_run(
+    model_arg: str,
+    models_available: list[str],
+    include_multimodel: bool,
+) -> list[str]:
+    if model_arg == "all":
+        models_to_run = list(models_available)
+    elif model_arg == "multimodel":
+        models_to_run = ["multimodel"]
+    elif model_arg in models_available:
+        models_to_run = [model_arg]
+    else:
+        raise ValueError(
+            f"Modelo {model_arg!r} não está disponível para esta rodada. "
+            f"Disponíveis: {models_available}"
+        )
+
+    if include_multimodel and "multimodel" not in models_to_run:
+        models_to_run = ["multimodel"] + models_to_run
+
+    return models_to_run
+
+
+def generate_maps(
+    backend: str,
+    base: str,
+    model: str,
+    var: str,
+    calibration: str,
+    year_fcst: int,
+    month_fcst: int,
+) -> None:
+    if backend == "none":
+        return
+
+    if backend == "grads":
+        run_grads_maps_realtime(
+            base,
+            model,
+            var,
+            calibration,
+            year_fcst,
+            month_fcst,
+        )
+        return
+
+    run_python_maps_realtime(
+        base,
+        model,
+        var,
+        calibration,
+        year_fcst,
+        month_fcst,
+    )
+
+
+def main() -> None:
+    args = parse_args()
+
+    setup_logging(
+        args.year,
+        args.month,
+    )
+
+    logger = logging.getLogger(__name__)
+
+    variables = select_variables(args.var)
+    calibrations = select_calibrations(args.calibration)
+    configured_models = list(get_list_models(args.base))
+    validate_model_arg(args.model, configured_models)
+    models_to_download = select_models_to_download(
+        args.model,
+        configured_models,
+        args.include_multimodel,
+    )
+
+    logger.info(
+        "Processando previsão em tempo-real: base=%s year=%s month=%s vars=%s",
+        args.base,
+        args.year,
+        args.month,
+        variables,
+    )
+
+    for var in variables:
+        if args.skip_products:
+            logger.info(
+                "Modo apenas mapas ativo; pulando download/interpolação/produtos."
+            )
+        elif not args.skip_download:
+            logger.info(
+                "Baixando previsão: base=%s var=%s models=%s",
+                args.base,
+                var,
+                models_to_download,
+            )
+
+            run_download_realtime_models(
+                args.base,
+                models_to_download,
+                var,
+                args.year,
+                args.month,
+            )
+
+        models_available = check_models(
+            args.base,
+            var,
+            args.year,
+            args.month,
+        )
+
+        logger.info("Modelos disponíveis para %s: %s", var, models_available)
+
+        models_to_interpolate = select_models_to_interpolate(
+            args.model,
+            models_available,
+            args.include_multimodel,
+        )
+
+        if not args.skip_products and not args.skip_interpolation:
+            logger.info(
+                "Interpolando previsão: base=%s var=%s models=%s",
+                args.base,
+                var,
+                models_to_interpolate,
+            )
+
+            run_interpolation_forecast_models(
+                args.base,
+                models_to_interpolate,
+                var,
+                args.year,
+                args.month,
+            )
+
+        models_to_run = select_models_to_run(
+            args.model,
+            models_available,
+            args.include_multimodel,
+        )
+
+        for model in models_to_run:
+            if args.skip_products:
+                logger.info(
+                    (
+                        "Pulando cálculo/escrita dos produtos; gerando mapas: "
+                        "base=%s var=%s model=%s calibrations=%s"
+                    ),
+                    args.base,
+                    var,
+                    model,
+                    calibrations,
+                )
+                results = None
+                obs_statistics = None
+            else:
+                logger.info(
+                    "Gerando produtos: base=%s var=%s model=%s calibrations=%s",
+                    args.base,
+                    var,
+                    model,
+                    calibrations,
+                )
+
+                results, obs_statistics = run_realtime_forecast(
+                    args.base,
+                    model,
+                    var,
+                    args.year,
+                    args.month,
+                    models_available,
+                )
+
+            for calibration in calibrations:
+                if results is not None:
+                    write_results_netcdf(
+                        results[calibration],
+                        args.base,
+                        model,
+                        var,
+                        calibration,
+                        args.year,
+                        args.month,
+                    )
+
+                    write_observation_statistics_netcdf(
+                        obs_statistics,
+                        args.base,
+                        model,
+                        var,
+                        calibration,
+                        args.year,
+                        args.month,
+                    )
+
+                generate_maps(
+                    args.maps,
+                    args.base,
+                    model,
+                    var,
+                    calibration,
+                    args.year,
+                    args.month,
+                )
+
+
+if __name__ == "__main__":
+    main()

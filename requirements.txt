@@ -13,3 +13,5 @@ joblib
 lifelines
 scikit-learn
 matplotlib
+cartopy
+streamlit

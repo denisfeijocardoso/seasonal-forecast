@@ -1347,7 +1347,7 @@ class Calibration:
 
 # bases = ["nmme"]
 # models_nmme = ["multimodel","canesm5", "ccsm4", "cesm1", "cfsv2", "gem52nemo", "geos5v2", "spear","bam12"]#
-# models_cs3 = ["multimodel","ecmwf", "ukmo","meteo_france","dwd","cmcc","ncep","jma","eccc4","eccc5","bom","bam12"] 
+# models_c3s = ["multimodel","ecmwf", "ukmo","meteo_france","dwd","cmcc","ncep","jma","eccc4","eccc5","bom","bam12"] 
 # varis = ["prec","t2mt"]#"prec","t2mt"
 # type_calibrations = ["nocalib"]#"regr","gamma","nocalib","cox"
 # #months = [2]

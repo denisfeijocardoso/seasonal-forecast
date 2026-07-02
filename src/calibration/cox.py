@@ -183,6 +183,10 @@ def interpolate_curve(
         curva = curva[mask]
         vetorx = vetorx[mask]
 
+        if curva.size > 1 and curva[0] > curva[-1]:
+            curva = curva[::-1]
+            vetorx = vetorx[::-1]
+
         if curva.size == 0:
             return np.nan
 
@@ -485,10 +489,14 @@ def build_inputs(
     realtime_forecast: xr.DataArray        
 ) -> dict[str, Any]:
 
-        realtime_forecast = realtime_forecast.rename({
-            "Y": "lat",
-            "X": "lon"
-        })
+        rename_dims = {
+            dim: name
+            for dim, name in {"Y": "lat", "X": "lon"}.items()
+            if dim in realtime_forecast.dims
+        }
+
+        if rename_dims:
+            realtime_forecast = realtime_forecast.rename(rename_dims)
 
         forecast_anomaly = realtime_forecast - hcst_stats["mean"]
         

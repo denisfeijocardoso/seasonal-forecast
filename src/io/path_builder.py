@@ -29,7 +29,7 @@ def build_output_path(
     out_path =  ( 
         root_path /
         base /
-        f"v{multimodel_version}" /
+        f"{multimodel_version}" /
         type_product /
         type_calibration /
         name_model_dir /

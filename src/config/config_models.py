@@ -26,7 +26,7 @@ def get_model_version(model: str) -> str:
 
 
 def get_multimodel_version(base: str) -> str:
-    return MODELS_CONFIG["bases"][base]["multimodel_version"]
+    return f"v{MODELS_CONFIG['bases'][base]['multimodel_version']}"
 
 def get_dim_names(
         base: str,
@@ -49,6 +49,9 @@ def get_list_models(base: str) -> list[str]:
     
 def build_model_title(model: str) -> str:
 
+    if model == "multimodel":
+        return "Multimodel"
+
     try:
         title = MODELS_CONFIG["models"][model]["title"]
         version = get_model_version(model)
@@ -65,6 +68,8 @@ def build_model_title(model: str) -> str:
 
 def build_model_dir_name(model: str) -> str:
 
+    if model == "multimodel":
+        return "multimodel"
 
     dir_name = MODELS_CONFIG["models"][model]["directory"]
     version = get_model_version(model)
@@ -115,8 +120,6 @@ def check_models(
     for mdl in models:
 
         name_model_dir = build_model_dir_name(mdl)
-
-        print(name_model_dir)
 
         file_path = (
             PATH_FCST / 

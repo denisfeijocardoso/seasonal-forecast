@@ -417,6 +417,14 @@ while (incrproi<=incrprof)
             'q attr'
 
             linha = sublin(result, 5)
+            nlinha = 1
+            while (nlinha <= 200)
+                linha_attr = sublin(result, nlinha)
+                if (subwrd(linha_attr, 3) = 'history')
+                    linha = linha_attr
+                endif
+                nlinha = nlinha + 1
+            endwhile
             say 'Arquivo aberto: ' % linha
 
             mes_init = subwrd(linha, 5)
