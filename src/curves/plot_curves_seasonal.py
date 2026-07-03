@@ -294,11 +294,11 @@ class Curves:
             y_inf = p_below_inf
             y_sup = p_below_sup
 
-            plt.plot([terc_inf_val, terc_inf_val],[-0.05, y_inf],'--',color='black',linewidth=1)
-            plt.plot([-0.05, terc_inf_val],[y_inf, y_inf],'--',color='black',linewidth=1)
+            plt.plot([terc_inf_val, terc_inf_val],[0, y_inf],'--',color='black',linewidth=1)
+            plt.plot([plt.gca().get_xlim()[0], terc_inf_val],[y_inf, y_inf],'--',color='black',linewidth=1)
 
-            plt.plot([terc_sup_val, terc_sup_val], [-0.05, y_sup],'--', color='black', linewidth=1)
-            plt.plot([-0.05, terc_sup_val], [y_sup, y_sup],'--', color='black',linewidth=1)
+            plt.plot([terc_sup_val, terc_sup_val], [0, y_sup],'--', color='black', linewidth=1)
+            plt.plot([plt.gca().get_xlim()[0], terc_sup_val], [y_sup, y_sup],'--', color='black',linewidth=1)
 
             plt.text(terc_inf_val,0,r"$\mathbf{T\,1}$",ha='center',va='top',fontsize=8.5, fontweight='bold')
             plt.text(terc_sup_val,0.05,r"$\mathbf{T\,2}$",ha='center',va='top',fontsize=8.5, fontweight='bold') 
@@ -374,11 +374,11 @@ class Curves:
             y_inf = p_above_inf
             y_sup = p_above_sup
 
-            plt.plot([terc_inf_val, terc_inf_val],[-0.05, y_inf],'--',color='black',linewidth=1)
-            plt.plot([-0.05, terc_inf_val],[y_inf, y_inf],'--',color='black',linewidth=1)
+            plt.plot([terc_inf_val, terc_inf_val],[0, y_inf],'--',color='black',linewidth=1)
+            plt.plot([plt.gca().get_xlim()[0], terc_inf_val],[y_inf, y_inf],'--',color='black',linewidth=1)
 
-            plt.plot([terc_sup_val, terc_sup_val], [-0.05, y_sup],'--', color='black', linewidth=1)
-            plt.plot([-0.05, terc_sup_val], [y_sup, y_sup],'--', color='black',linewidth=1)
+            plt.plot([terc_sup_val, terc_sup_val], [0, y_sup],'--', color='black', linewidth=1)
+            plt.plot([plt.gca().get_xlim()[0], terc_sup_val], [y_sup, y_sup],'--', color='black',linewidth=1)
 
             plt.text(terc_inf_val,0,r"$\mathbf{T\,1}$",ha='center',va='top',fontsize=8.5, fontweight='bold')
             plt.text(terc_sup_val,0.05,r"$\mathbf{T\,2}$",ha='center',va='top',fontsize=8.5, fontweight='bold') 
@@ -485,11 +485,11 @@ class Curves:
             y_inf = p_below_inf
             y_sup = p_below_sup
 
-            plt.plot([terc_inf_val, terc_inf_val],[-0.05, y_inf],'--',color='black',linewidth=1)
-            plt.plot([-0.05, terc_inf_val],[y_inf, y_inf],'--',color='black',linewidth=1)
+            plt.plot([terc_inf_val, terc_inf_val],[0, y_inf],'--',color='black',linewidth=1)
+            plt.plot([plt.gca().get_xlim()[0], terc_inf_val],[y_inf, y_inf],'--',color='black',linewidth=1)
 
-            plt.plot([terc_sup_val, terc_sup_val], [-0.05, y_sup],'--', color='black', linewidth=1)
-            plt.plot([-0.05, terc_sup_val], [y_sup, y_sup],'--', color='black',linewidth=1)
+            plt.plot([terc_sup_val, terc_sup_val], [0, y_sup],'--', color='black', linewidth=1)
+            plt.plot([plt.gca().get_xlim()[0], terc_sup_val], [y_sup, y_sup],'--', color='black',linewidth=1)
 
             plt.text(terc_inf_val,0,r"$\mathbf{T\,1}$",ha='center',va='top',fontsize=8.5, fontweight='bold')
             plt.text(terc_sup_val,0.05,r"$\mathbf{T\,2}$",ha='center',va='top',fontsize=8.5, fontweight='bold') 
@@ -566,11 +566,11 @@ class Curves:
             y_inf = p_above_inf
             y_sup = p_above_sup
 
-            plt.plot([terc_inf_val, terc_inf_val],[-0.05, y_inf],'--',color='black',linewidth=1)
-            plt.plot([-0.05, terc_inf_val],[y_inf, y_inf],'--',color='black',linewidth=1)
+            plt.plot([terc_inf_val, terc_inf_val],[0, y_inf],'--',color='black',linewidth=1)
+            plt.plot([plt.gca().get_xlim()[0], terc_inf_val],[y_inf, y_inf],'--',color='black',linewidth=1)
 
-            plt.plot([terc_sup_val, terc_sup_val], [-0.05, y_sup],'--', color='black', linewidth=1)
-            plt.plot([-0.05, terc_sup_val], [y_sup, y_sup],'--', color='black',linewidth=1)
+            plt.plot([terc_sup_val, terc_sup_val], [0, y_sup],'--', color='black', linewidth=1)
+            plt.plot([plt.gca().get_xlim()[0], terc_sup_val], [y_sup, y_sup],'--', color='black',linewidth=1)
 
             plt.text(terc_inf_val,0,r"$\mathbf{T\,1}$",ha='center',va='top',fontsize=8.5, fontweight='bold')
             plt.text(terc_sup_val,0.05,r"$\mathbf{T\,2}$",ha='center',va='top',fontsize=8.5, fontweight='bold') 
@@ -725,11 +725,11 @@ class Curves:
 
             # ---- Linha para terc_inf_val ----
             # vertical
-            plt.plot([terc_inf_val, terc_inf_val],[-0.05, y_inf],
+            plt.plot([terc_inf_val, terc_inf_val],[0, y_inf],
                 linestyle='--',color='black',linewidth=1)
 
-            # horizontal até eixo Y (x=0)
-            plt.plot([-0.05, terc_inf_val],[y_inf, y_inf],
+            # horizontal até limite esquerdo do eixo x
+            plt.plot([plt.gca().get_xlim()[0], terc_inf_val],[y_inf, y_inf],
                 linestyle='--',color='black',linewidth=1)
 
             plt.text(terc_inf_val, 0, r"$\mathbf{T\,1}$", ha='center',
@@ -737,11 +737,11 @@ class Curves:
 
             # ---- Linha para terc_sup_val ----
             # vertical
-            plt.plot([terc_sup_val, terc_sup_val],[-0.05, y_sup],
+            plt.plot([terc_sup_val, terc_sup_val],[0, y_sup],
                 linestyle='--',color='black',linewidth=1)
 
-            # horizontal até eixo Y
-            plt.plot([-0.05, terc_sup_val],[y_sup, y_sup],
+            # horizontal até limite esquerdo do eixo x
+            plt.plot([plt.gca().get_xlim()[0], terc_sup_val],[y_sup, y_sup],
                 linestyle='--', color='black', linewidth=1)
 
             plt.text(terc_sup_val,0.05,r"$\mathbf{T\,2}$",
@@ -826,11 +826,11 @@ class Curves:
 
             # ---- Linha para terc_inf_val ----
             # vertical
-            plt.plot([terc_inf_val, terc_inf_val],[-0.05, y_inf],
+            plt.plot([terc_inf_val, terc_inf_val],[0, y_inf],
                 linestyle='--',color='black',linewidth=1)
 
-            # horizontal até eixo Y (x=0)
-            plt.plot([-0.05, terc_inf_val],[y_inf, y_inf],
+            # horizontal até limite esquerdo do eixo x
+            plt.plot([plt.gca().get_xlim()[0], terc_inf_val],[y_inf, y_inf],
                 linestyle='--',color='black',linewidth=1)
 
             plt.text(terc_inf_val, 0, r"$\mathbf{T\,1}$", ha='center',
@@ -838,11 +838,11 @@ class Curves:
 
             # ---- Linha para terc_sup_val ----
             # vertical
-            plt.plot([terc_sup_val, terc_sup_val],[-0.05, y_sup],
+            plt.plot([terc_sup_val, terc_sup_val],[0, y_sup],
                 linestyle='--',color='black',linewidth=1)
 
-            # horizontal até eixo Y
-            plt.plot([-0.05, terc_sup_val],[y_sup, y_sup],
+            # horizontal até limite esquerdo do eixo x
+            plt.plot([plt.gca().get_xlim()[0], terc_sup_val],[y_sup, y_sup],
                 linestyle='--', color='black', linewidth=1)
 
             plt.text(terc_sup_val,0.05,r"$\mathbf{T\,2}$",
@@ -1010,11 +1010,11 @@ class Curves:
 
             # ---- Linha para terc_inf_val ----
             # vertical
-            plt.plot([terc_inf_val, terc_inf_val],[-0.05, y_inf],
+            plt.plot([terc_inf_val, terc_inf_val],[0, y_inf],
                 linestyle='--',color='black',linewidth=1)
 
-            # horizontal até eixo Y (x=0)
-            plt.plot([-0.05, terc_inf_val],[y_inf, y_inf],
+            # horizontal até limite esquerdo do eixo x
+            plt.plot([plt.gca().get_xlim()[0], terc_inf_val],[y_inf, y_inf],
                 linestyle='--',color='black',linewidth=1)
 
             plt.text(terc_inf_val, 0, r"$\mathbf{T\,1}$", ha='center',
@@ -1022,11 +1022,11 @@ class Curves:
 
             # ---- Linha para terc_sup_val ----
             # vertical
-            plt.plot([terc_sup_val, terc_sup_val],[-0.05, y_sup],
+            plt.plot([terc_sup_val, terc_sup_val],[0, y_sup],
                 linestyle='--',color='black',linewidth=1)
 
-            # horizontal até eixo Y
-            plt.plot([-0.05, terc_sup_val],[y_sup, y_sup],
+            # horizontal até limite esquerdo do eixo x
+            plt.plot([plt.gca().get_xlim()[0], terc_sup_val],[y_sup, y_sup],
                 linestyle='--', color='black', linewidth=1)
 
             plt.text(terc_sup_val,0.05,r"$\mathbf{T\,2}$",
@@ -1116,11 +1116,11 @@ class Curves:
 
             # ---- Linha para terc_inf_val ----
             # vertical
-            plt.plot([terc_inf_val, terc_inf_val],[-0.05, y_inf],
+            plt.plot([terc_inf_val, terc_inf_val],[0, y_inf],
                 linestyle='--',color='black',linewidth=1)
 
-            # horizontal até eixo Y (x=0)
-            plt.plot([-0.05, terc_inf_val],[y_inf, y_inf],
+            # horizontal até limite esquerdo do eixo x
+            plt.plot([plt.gca().get_xlim()[0], terc_inf_val],[y_inf, y_inf],
                 linestyle='--',color='black',linewidth=1)
 
             plt.text(terc_inf_val, 0, r"$\mathbf{T\,1}$", ha='center',
@@ -1128,11 +1128,11 @@ class Curves:
 
             # ---- Linha para terc_sup_val ----
             # vertical
-            plt.plot([terc_sup_val, terc_sup_val],[-0.05, y_sup],
+            plt.plot([terc_sup_val, terc_sup_val],[0, y_sup],
                 linestyle='--',color='black',linewidth=1)
 
-            # horizontal até eixo Y
-            plt.plot([-0.05, terc_sup_val],[y_sup, y_sup],
+            # horizontal até limite esquerdo do eixo x
+            plt.plot([plt.gca().get_xlim()[0], terc_sup_val],[y_sup, y_sup],
                 linestyle='--', color='black', linewidth=1)
 
             plt.text(terc_sup_val,0.05,r"$\mathbf{T\,2}$",

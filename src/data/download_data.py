@@ -500,7 +500,7 @@ def download_realtime_copernicus(
         "data_format": "netcdf"
     } 
 
-    file_name = f"{var}_monthly_{name_model_dir}_hcst_{year_fcst}{month_fcst}01.nc"  
+    file_name = f"{var}_monthly_{name_model_dir}_fcst_{year_fcst}{month_fcst}01.nc"  
 
     file_path = (
         download_path / 

@@ -18,13 +18,15 @@ except Exception:
     PATH_FIG = Path("/dados/mmclima/multimodelo/seasonal/figures")
 
 
+DEFAULT_FORECAST_ROOT = PATH_FIG
+
+
 @dataclass(frozen=True)
-class FigureInfo:
+class ForecastFigure:
     path: Path
     relative_path: str
     base: str
     version: str
-    product_type: str
     calibration: str
     model: str
     year: str
@@ -36,17 +38,17 @@ class FigureInfo:
 
 
 def main() -> None:
-    st.set_page_config(page_title="Seasonal Maps", layout="wide")
-    st.title("Seasonal Maps")
+    st.set_page_config(page_title="Seasonal Forecast Maps", layout="wide")
+    st.title("Seasonal Forecast Maps")
 
     root = sidebar_root()
-    figures = load_figures(root)
+    figures = load_forecast_figures(root)
 
     if not root.exists():
         st.warning(f"Pasta nao encontrada: {root}")
         return
     if not figures:
-        st.warning(f"Nenhuma figura PNG encontrada em: {root}")
+        st.warning(f"Nenhuma figura PNG de forecast encontrada em: {root}")
         return
 
     filtered = sidebar_filters(figures)
@@ -55,44 +57,74 @@ def main() -> None:
 
 def sidebar_root() -> Path:
     st.sidebar.header("Fonte")
-    root_text = st.sidebar.text_input("Pasta das figuras", value=str(PATH_FIG))
+    root_text = st.sidebar.text_input(
+        "Pasta das figuras",
+        value=str(DEFAULT_FORECAST_ROOT),
+    )
     root = Path(root_text).expanduser()
 
     if st.sidebar.button("Atualizar lista"):
-        load_figures.clear()
+        load_forecast_figures.clear()
 
     return root
 
 
-@st.cache_data(show_spinner="Lendo figuras...")
-def load_figures(root: Path) -> list[FigureInfo]:
+@st.cache_data(show_spinner="Lendo mapas de forecast...")
+def load_forecast_figures(root: Path) -> list[ForecastFigure]:
     if not root.exists():
         return []
 
-    files = sorted(root.rglob("*.png"), key=lambda path: str(path).lower())
-    return [parse_figure(path, root) for path in files]
+    figures: list[ForecastFigure] = []
+    for path in sorted(iter_forecast_pngs(root), key=lambda item: str(item).lower()):
+        parsed = parse_forecast_figure(path, root)
+        if parsed is not None:
+            figures.append(parsed)
+    return figures
 
 
-def parse_figure(path: Path, root: Path) -> FigureInfo:
-    rel_parts = path.relative_to(root).parts
-    name_parts = path.stem.split("_")
+def iter_forecast_pngs(root: Path):
+    if root.name == "forecast":
+        yield from root.rglob("*.png")
+        return
 
-    base = rel_parts[0] if len(rel_parts) > 0 else ""
-    version = rel_parts[1] if len(rel_parts) > 1 else ""
-    product_type = rel_parts[2] if len(rel_parts) > 2 else ""
-    calibration = rel_parts[3] if len(rel_parts) > 3 else ""
-    model = rel_parts[4] if len(rel_parts) > 4 else ""
-    year = rel_parts[5] if len(rel_parts) > 5 else ""
-    issued = rel_parts[6] if len(rel_parts) > 6 else ""
+    forecast_dirs = [
+        path
+        for path in root.glob("*/*/forecast")
+        if path.is_dir()
+    ]
+    if forecast_dirs:
+        for forecast_dir in forecast_dirs:
+            yield from forecast_dir.rglob("*.png")
+        return
 
-    variable, product, period, region = parse_name_fields(name_parts)
+    for path in root.rglob("*.png"):
+        if "forecast" in path.parts:
+            yield path
 
-    return FigureInfo(
+
+def parse_forecast_figure(path: Path, root: Path) -> ForecastFigure | None:
+    parts = path.parts
+    if "forecast" not in parts:
+        return None
+
+    forecast_index = parts.index("forecast")
+    if forecast_index < 2 or len(parts) <= forecast_index + 5:
+        return None
+
+    base = parts[forecast_index - 2]
+    version = parts[forecast_index - 1]
+    calibration = parts[forecast_index + 1]
+    model = parts[forecast_index + 2]
+    year = parts[forecast_index + 3]
+    issued = parts[forecast_index + 4]
+
+    variable, product, period, region = parse_forecast_name(path.stem.split("_"))
+
+    return ForecastFigure(
         path=path,
         relative_path=str(path.relative_to(root)),
         base=base,
         version=version,
-        product_type=product_type,
         calibration=calibration,
         model=model,
         year=year,
@@ -104,7 +136,7 @@ def parse_figure(path: Path, root: Path) -> FigureInfo:
     )
 
 
-def parse_name_fields(parts: list[str]) -> tuple[str, str, str, str]:
+def parse_forecast_name(parts: list[str]) -> tuple[str, str, str, str]:
     variable = next((part for part in parts if part in {"prec", "t2mt"}), "")
     period = next((part for part in parts if re.fullmatch(r"(mnth|seas)\d{2}", part)), "")
     region = parts[-1] if parts else ""
@@ -127,13 +159,12 @@ def parse_name_fields(parts: list[str]) -> tuple[str, str, str, str]:
     return variable, product, period, region
 
 
-def sidebar_filters(figures: list[FigureInfo]) -> list[FigureInfo]:
+def sidebar_filters(figures: list[ForecastFigure]) -> list[ForecastFigure]:
     st.sidebar.header("Filtros")
 
     fields = (
         ("base", "Base"),
         ("version", "Versao"),
-        ("product_type", "Tipo"),
         ("calibration", "Calibracao"),
         ("model", "Modelo"),
         ("year", "Ano"),
@@ -144,13 +175,11 @@ def sidebar_filters(figures: list[FigureInfo]) -> list[FigureInfo]:
         ("region", "Regiao"),
     )
 
-    selected: dict[str, str] = {}
     filtered = figures
     for attr, label in fields:
         options = unique_values(filtered, attr)
-        choice = st.sidebar.selectbox(label, ["Todos", *options], key=attr)
+        choice = st.sidebar.selectbox(label, ["Todos", *options], key=f"forecast_{attr}")
         if choice != "Todos":
-            selected[attr] = choice
             filtered = [figure for figure in filtered if getattr(figure, attr) == choice]
 
     search = st.sidebar.text_input("Buscar no nome/caminho").strip().lower()
@@ -165,11 +194,11 @@ def sidebar_filters(figures: list[FigureInfo]) -> list[FigureInfo]:
     return filtered
 
 
-def unique_values(figures: list[FigureInfo], attr: str) -> list[str]:
+def unique_values(figures: list[ForecastFigure], attr: str) -> list[str]:
     return sorted({getattr(figure, attr) for figure in figures if getattr(figure, attr)})
 
 
-def render_gallery(figures: list[FigureInfo]) -> None:
+def render_gallery(figures: list[ForecastFigure]) -> None:
     st.caption(f"{len(figures)} figura(s)")
 
     if not figures:
