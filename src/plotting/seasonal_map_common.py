@@ -32,6 +32,7 @@ class MapStyle:
     tercile_colorbar_labels: bool = False
     colorbar_extend: str = "both"
     palette_files: tuple[str, ...] = ()
+    compact_colorbar_ticks: bool = False
 
 
 @dataclass(frozen=True)
@@ -472,6 +473,10 @@ def render_map(
     )
     tick_size = 10 if style.tercile_colorbar_labels else 9
     colorbar.ax.tick_params(labelsize=tick_size)
+    if style.compact_colorbar_ticks:
+        colorbar.set_ticklabels(
+            [_format_compact_number(value) for value in style.levels]
+        )
     if style.tercile_colorbar_labels:
         _add_tercile_colorbar_labels(fig, ax, colorbar, colorbar_orientation)
 
@@ -505,6 +510,13 @@ def _colorbar_orientation(region: Region) -> str:
     if region.name in HORIZONTAL_COLORBAR_REGIONS:
         return "horizontal"
     return "vertical"
+
+
+def _format_compact_number(value: float) -> str:
+    if math.isclose(value, round(value), abs_tol=1e-9):
+        return str(int(round(value)))
+
+    return f"{value:.2f}".rstrip("0").rstrip(".")
 
 
 def _ticks(start: float, end: float, interval: float) -> list[float]:

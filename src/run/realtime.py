@@ -56,13 +56,14 @@ def run_realtime_forecast(
             obs_statistics,
             hcst_statistics,
             realtime_forecast,
-            compute_prec_products = True  
+            compute_prec_products = var == "prec"
     )
 
     results_regression = get_linear_regression_calibr_results(
             obs_statistics,
             hcst_statistics,
-            realtime_forecast     
+            realtime_forecast,
+            var
     )
 
     results_no_calibration = get_no_calibration_results(

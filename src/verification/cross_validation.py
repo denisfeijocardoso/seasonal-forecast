@@ -69,6 +69,7 @@ def run_cross_validation(
                 obs_statistics,
                 hcst_statistics,
                 hcst_target,
+                var,
             )
 
         elif type_calibration == "cox":

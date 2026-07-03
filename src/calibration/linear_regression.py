@@ -192,7 +192,8 @@ def compute_precipitation_results(
 def get_linear_regression_calibr_results(
         obs_statistics: dict[str, dict[str, xr.DataArray]],
         hcst_statistics: dict[str, dict[str, xr.DataArray]],
-        realtime_forecast: dict[str, xr.DataArray]      
+        realtime_forecast: dict[str, xr.DataArray],
+        var: str
 ) -> dict[str, dict[str, xr.DataArray]]:
 
     periods = get_periods_aggregation()
@@ -227,7 +228,11 @@ def get_linear_regression_calibr_results(
             probabilities["above_tsup"]
         )
 
-        precipitation_results = compute_precipitation_results(calibration)
+        precipitation_results = (
+            compute_precipitation_results(calibration)
+            if var == "prec"
+            else {}
+        )
 
         results[period] = {
             "correlation": correlation,

@@ -271,13 +271,14 @@ def _forecast_style(
     if var == "t2mt":
         if product_name == "anomaly":
             return MapStyle(
-                "2-METRE TEMPERATURE ANOMALY (degC)",
+                "2-METRE TEMPERATURE ANOMALY (ºC)",
                 (-3, -2.5, -2, -1.5, -1, -0.5, -0.25, 0.25, 0.5, 1, 1.5, 2, 2.5, 3),
                 (47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61),
+                compact_colorbar_ticks=True,
             )
         if product_name == "total":
             return MapStyle(
-                "2-METRE TEMPERATURE (degC)",
+                "2-METRE TEMPERATURE (ºC)",
                 (-30, -27, -24, -21, -18, -15, -12, -8, -4, 4, 8, 12, 15, 18, 21, 24, 27, 30),
                 (100, 83, 82, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99),
                 draw_contours=True,
@@ -294,8 +295,8 @@ def _forecast_style(
         if product_name in {"above_mean", "above_median"}:
             return MapStyle(
                 "PROB. TEMPERATURE ABOVE NORMAL (%)",
-                (0, 10, 20, 30, 40, 45, 55, 60, 70, 80, 90, 100),
-                (20, 22, 24, 25, 26, 27, 30, 30, 32, 33, 34),
+                (0, 10, 20, 30, 40, 45, 55, 70, 80, 90, 100),
+                (20, 22, 24, 25, 26, 27, 30, 32, 33, 34),
                 factor=100.0,
                 colorbar_extend="neither",
             )
