@@ -182,7 +182,8 @@ def download_hcstfile_nmme(
                 
                 # Verifica se o arquivo é um NetCDF válido
                 xr.open_dataset(
-                    file_path
+                    file_path,
+                    decode_times=False,
                 ).close()
 
                 logger.info(
@@ -304,7 +305,8 @@ def download_hcstfile_copernicus(
             try:
 
                 xr.open_dataset(
-                    file_path
+                    file_path,
+                    decode_times=False,
                 ).close()
 
                 logger.info(
@@ -421,7 +423,8 @@ def download_realtime_nmme(
 
         # Verifica se o arquivo é um NetCDF válido
         xr.open_dataset(
-            file_path
+            file_path,
+            decode_times=False,
         ).close()
 
         logger.info(
@@ -532,7 +535,8 @@ def download_realtime_copernicus(
         try:
 
             xr.open_dataset(
-                file_path
+                file_path,
+                decode_times=False,
             ).close()
 
             logger.info(
