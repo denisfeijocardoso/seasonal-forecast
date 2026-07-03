@@ -4,11 +4,11 @@ import logging
 from dataclasses import dataclass
 from pathlib import Path
 
+from src.plotting.palettes import forecast_palette
 from src.plotting.seasonal_map_common import (
     BASE_PREFIX,
     MULTIMODEL_BASE_PREFIX,
     REGIONS,
-    TOOLS_FORECAST,
     MapStyle,
     build_model_labels,
     calibration_file_suffix,
@@ -18,7 +18,6 @@ from src.plotting.seasonal_map_common import (
     input_dir,
     open_product_data,
     output_dir,
-    parse_grads_rgb,
     render_map,
 )
 
@@ -70,7 +69,7 @@ def run_python_maps_realtime(
     skip_existing: bool = True,
 ) -> list[Path]:
     model_dir, model_title = build_model_labels(model)
-    palette = parse_grads_rgb(TOOLS_FORECAST)
+    palette = forecast_palette()
     generated: list[Path] = []
 
     in_dir = input_dir(
@@ -110,30 +109,45 @@ def run_python_maps_realtime(
                 logger.warning("Arquivo nao encontrado, pulando: %s", nc_file)
                 continue
 
+            png_files = [
+                out_dir / (
+                    _forecast_output_name(
+                        base,
+                        model,
+                        model_dir,
+                        var,
+                        product.figure_name,
+                        type_calibration,
+                        year_fcst,
+                        month_fcst,
+                        period,
+                        region.name,
+                    )
+                    + ".png"
+                )
+                for region in REGIONS
+            ]
+            if skip_existing and all(png_file.exists() for png_file in png_files):
+                logger.info(
+                    "Todos os mapas ja existem, pulando arquivo: %s",
+                    nc_file,
+                )
+                continue
+
             ds, da = open_product_data(nc_file, product.product_name)
             try:
                 titles = (
-                    _forecast_title_line_1(base, model_dir, model_title, type_calibration),
+                    _forecast_title_line_1(
+                        base,
+                        model_dir,
+                        model_title,
+                        type_calibration,
+                    ),
                     style.title,
                     history_title(ds, forecast=True),
                 )
 
-                for region in REGIONS:
-                    png_file = out_dir / (
-                        _forecast_output_name(
-                            base,
-                            model,
-                            model_dir,
-                            var,
-                            product.figure_name,
-                            type_calibration,
-                            year_fcst,
-                            month_fcst,
-                            period,
-                            region.name,
-                        )
-                        + ".png"
-                    )
+                for region, png_file in zip(REGIONS, png_files):
                     if render_map(
                         da,
                         region,

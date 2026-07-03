@@ -5,12 +5,12 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
+from src.plotting.palettes import verification_palette
 from src.plotting.seasonal_map_common import (
     BASE_PREFIX,
     CLIMATOLOGY_LABELS,
     MULTIMODEL_BASE_PREFIX,
     REGIONS,
-    TOOLS_VERIFICATION,
     MapStyle,
     build_model_labels,
     calibration_file_suffix,
@@ -20,7 +20,6 @@ from src.plotting.seasonal_map_common import (
     input_dir,
     open_product_data,
     output_dir,
-    parse_grads_rgb,
     render_map,
 )
 
@@ -89,7 +88,7 @@ def run_python_maps_verification(
             style = _verification_style(var, product.product_name, product_type)
             if style is None:
                 continue
-            palette = parse_grads_rgb(TOOLS_VERIFICATION, style.palette_files)
+            palette = verification_palette(style.palette_files)
 
             nc_file = _verification_input_file(
                 in_dir,

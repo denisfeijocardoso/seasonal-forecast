@@ -651,45 +651,49 @@ def _add_brazil_states(ax, region: Region, transform) -> None:
 
 def _add_vertical_tercile_colorbar_axis(fig, ax):
     bbox = ax.get_position()
+    block_shift = 0.018
     cbar_width = 0.020
-    cbar_left = min(0.950, bbox.x1 + 0.065)
+    cbar_left = min(0.968, bbox.x1 + 0.065 + block_shift)
     return fig.add_axes([cbar_left, bbox.y0, cbar_width, bbox.height])
 
 
 def _add_tercile_colorbar_labels(fig, ax, colorbar, orientation: str) -> None:
+    label_fontsize = 13
+
     if orientation == "horizontal":
         colorbar.ax.text(
             0.5,
-            1.85,
+            1.78,
             "White: equal probability for all categories",
             transform=colorbar.ax.transAxes,
             ha="center",
             va="bottom",
-            fontsize=11,
+            fontsize=label_fontsize,
         )
         colorbar.ax.text(
             0.25,
-            1.25,
+            1.05,
             "Lower Tercile",
             transform=colorbar.ax.transAxes,
             ha="center",
             va="bottom",
-            fontsize=11,
+            fontsize=label_fontsize,
         )
         colorbar.ax.text(
             0.75,
-            1.25,
+            1.05,
             "Upper Tercile",
             transform=colorbar.ax.transAxes,
             ha="center",
             va="bottom",
-            fontsize=11,
+            fontsize=label_fontsize,
         )
         return
 
     map_bbox = ax.get_position()
     cbar_bbox = colorbar.ax.get_position()
-    white_x = map_bbox.x1 + 0.014
+    block_shift = 0.018
+    white_x = map_bbox.x1 + 0.014 + block_shift
     tercile_x = white_x + 0.029
 
     fig.text(
@@ -698,7 +702,7 @@ def _add_tercile_colorbar_labels(fig, ax, colorbar, orientation: str) -> None:
         "White: equal probability for all categories",
         ha="center",
         va="center",
-        fontsize=11,
+        fontsize=label_fontsize,
         rotation=90,
     )
     fig.text(
@@ -707,7 +711,7 @@ def _add_tercile_colorbar_labels(fig, ax, colorbar, orientation: str) -> None:
         "Upper Tercile",
         ha="center",
         va="center",
-        fontsize=11,
+        fontsize=label_fontsize,
         rotation=90,
     )
     fig.text(
@@ -716,7 +720,7 @@ def _add_tercile_colorbar_labels(fig, ax, colorbar, orientation: str) -> None:
         "Lower Tercile",
         ha="center",
         va="center",
-        fontsize=11,
+        fontsize=label_fontsize,
         rotation=90,
     )
 
