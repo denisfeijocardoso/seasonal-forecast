@@ -7,6 +7,7 @@ import calendar
 import time
 import matplotlib
 import matplotlib.pyplot as plt
+from matplotlib.ticker import FuncFormatter
 from scipy.stats import norm
 from tqdm import tqdm
 from multiprocessing import Pool
@@ -19,6 +20,22 @@ from src.config.paths import PATH_FIG, PATH_POSPROC
 matplotlib.use('Agg')
 
 TXT_PATH = Path(__file__).with_name("coords_points_curves.txt")
+PROB_Y_MIN = -0.05
+PROB_Y_MAX = 1.05
+
+
+def _format_temperature_tick(value, _pos):
+    if not np.isfinite(value):
+        return ""
+
+    rounded = round(value)
+    if np.isclose(value, rounded):
+        return str(int(rounded))
+    return f"{value:g}"
+
+
+def _format_temperature_xaxis():
+    plt.gca().xaxis.set_major_formatter(FuncFormatter(_format_temperature_tick))
 
 
 def _forecast_date(year_fcst: int, month_fcst: int) -> str:
@@ -371,10 +388,10 @@ class Curves:
             y_inf = p_below_inf
             y_sup = p_below_sup
 
-            plt.plot([terc_inf_val, terc_inf_val],[0, y_inf],'--',color='black',linewidth=1)
+            plt.plot([terc_inf_val, terc_inf_val],[PROB_Y_MIN, y_inf],'--',color='black',linewidth=1)
             plt.plot([plt.gca().get_xlim()[0], terc_inf_val],[y_inf, y_inf],'--',color='black',linewidth=1)
 
-            plt.plot([terc_sup_val, terc_sup_val], [0, y_sup],'--', color='black', linewidth=1)
+            plt.plot([terc_sup_val, terc_sup_val], [PROB_Y_MIN, y_sup],'--', color='black', linewidth=1)
             plt.plot([plt.gca().get_xlim()[0], terc_sup_val], [y_sup, y_sup],'--', color='black',linewidth=1)
 
             plt.text(terc_inf_val,0,r"$\mathbf{T\,1}$",ha='center',va='top',fontsize=8.5, fontweight='bold')
@@ -387,8 +404,10 @@ class Curves:
 
             plt.ylabel("Cumulative Probability",fontsize=9.5,fontweight='bold')     
 
-            plt.ylim(-0.05, 1.05)
+            plt.ylim(PROB_Y_MIN, PROB_Y_MAX)
             plt.xlim(left=float(np.nanmin(x_vals)), right=float(np.nanmax(x_vals)))
+            if var == "t2mt":
+                _format_temperature_xaxis()
 
             leg = plt.legend(loc='upper left', fontsize=7.8)
             leg.get_frame().set_facecolor('white')
@@ -449,10 +468,10 @@ class Curves:
             y_inf = p_above_inf
             y_sup = p_above_sup
 
-            plt.plot([terc_inf_val, terc_inf_val],[0, y_inf],'--',color='black',linewidth=1)
+            plt.plot([terc_inf_val, terc_inf_val],[PROB_Y_MIN, y_inf],'--',color='black',linewidth=1)
             plt.plot([plt.gca().get_xlim()[0], terc_inf_val],[y_inf, y_inf],'--',color='black',linewidth=1)
 
-            plt.plot([terc_sup_val, terc_sup_val], [0, y_sup],'--', color='black', linewidth=1)
+            plt.plot([terc_sup_val, terc_sup_val], [PROB_Y_MIN, y_sup],'--', color='black', linewidth=1)
             plt.plot([plt.gca().get_xlim()[0], terc_sup_val], [y_sup, y_sup],'--', color='black',linewidth=1)
 
             plt.text(terc_inf_val,0,r"$\mathbf{T\,1}$",ha='center',va='top',fontsize=8.5, fontweight='bold')
@@ -465,8 +484,10 @@ class Curves:
 
             plt.ylabel("Exceedance Probability",fontsize=9.5,fontweight='bold')     
 
-            plt.ylim(-0.05, 1.05)
+            plt.ylim(PROB_Y_MIN, PROB_Y_MAX)
             plt.xlim(left=float(np.nanmin(x_vals)), right=float(np.nanmax(x_vals)))
+            if var == "t2mt":
+                _format_temperature_xaxis()
 
             leg = plt.legend(loc='upper right', fontsize=7.8)
             leg.get_frame().set_facecolor('white')
@@ -558,10 +579,10 @@ class Curves:
             y_inf = p_below_inf
             y_sup = p_below_sup
 
-            plt.plot([terc_inf_val, terc_inf_val],[0, y_inf],'--',color='black',linewidth=1)
+            plt.plot([terc_inf_val, terc_inf_val],[PROB_Y_MIN, y_inf],'--',color='black',linewidth=1)
             plt.plot([plt.gca().get_xlim()[0], terc_inf_val],[y_inf, y_inf],'--',color='black',linewidth=1)
 
-            plt.plot([terc_sup_val, terc_sup_val], [0, y_sup],'--', color='black', linewidth=1)
+            plt.plot([terc_sup_val, terc_sup_val], [PROB_Y_MIN, y_sup],'--', color='black', linewidth=1)
             plt.plot([plt.gca().get_xlim()[0], terc_sup_val], [y_sup, y_sup],'--', color='black',linewidth=1)
 
             plt.text(terc_inf_val,0,r"$\mathbf{T\,1}$",ha='center',va='top',fontsize=8.5, fontweight='bold')
@@ -574,8 +595,10 @@ class Curves:
 
             plt.ylabel("Cumulative Probability",fontsize=9.5,fontweight='bold')     
 
-            plt.ylim(-0.05, 1.05)
+            plt.ylim(PROB_Y_MIN, PROB_Y_MAX)
             plt.xlim(left=float(np.nanmin(x_vals)), right=float(np.nanmax(x_vals)))
+            if var == "t2mt":
+                _format_temperature_xaxis()
 
             leg = plt.legend(loc='upper left', fontsize=7.8)
             leg.get_frame().set_facecolor('white')
@@ -637,10 +660,10 @@ class Curves:
             y_inf = p_above_inf
             y_sup = p_above_sup
 
-            plt.plot([terc_inf_val, terc_inf_val],[0, y_inf],'--',color='black',linewidth=1)
+            plt.plot([terc_inf_val, terc_inf_val],[PROB_Y_MIN, y_inf],'--',color='black',linewidth=1)
             plt.plot([plt.gca().get_xlim()[0], terc_inf_val],[y_inf, y_inf],'--',color='black',linewidth=1)
 
-            plt.plot([terc_sup_val, terc_sup_val], [0, y_sup],'--', color='black', linewidth=1)
+            plt.plot([terc_sup_val, terc_sup_val], [PROB_Y_MIN, y_sup],'--', color='black', linewidth=1)
             plt.plot([plt.gca().get_xlim()[0], terc_sup_val], [y_sup, y_sup],'--', color='black',linewidth=1)
 
             plt.text(terc_inf_val,0,r"$\mathbf{T\,1}$",ha='center',va='top',fontsize=8.5, fontweight='bold')
@@ -653,8 +676,10 @@ class Curves:
 
             plt.ylabel("Exceedance Probability",fontsize=9.5,fontweight='bold')     
 
-            plt.ylim(-0.05, 1.05)
+            plt.ylim(PROB_Y_MIN, PROB_Y_MAX)
             plt.xlim(left=float(np.nanmin(x_vals)), right=float(np.nanmax(x_vals)))
+            if var == "t2mt":
+                _format_temperature_xaxis()
 
             leg = plt.legend(loc='upper right', fontsize=7.8)
             leg.get_frame().set_facecolor('white')
@@ -794,7 +819,7 @@ class Curves:
 
             # ---- Linha para terc_inf_val ----
             # vertical
-            plt.plot([terc_inf_val, terc_inf_val],[0, y_inf],
+            plt.plot([terc_inf_val, terc_inf_val],[PROB_Y_MIN, y_inf],
                 linestyle='--',color='black',linewidth=1)
 
             # horizontal até limite esquerdo do eixo x
@@ -806,7 +831,7 @@ class Curves:
 
             # ---- Linha para terc_sup_val ----
             # vertical
-            plt.plot([terc_sup_val, terc_sup_val],[0, y_sup],
+            plt.plot([terc_sup_val, terc_sup_val],[PROB_Y_MIN, y_sup],
                 linestyle='--',color='black',linewidth=1)
 
             # horizontal até limite esquerdo do eixo x
@@ -819,7 +844,7 @@ class Curves:
             plt.xlim(0, x_max)
 
             #plt.xlim(0, np.max(obs_sorted))
-            plt.ylim(-0.05, 1.05)
+            plt.ylim(PROB_Y_MIN, PROB_Y_MAX)
             plt.grid(False)
 
             leg = plt.legend(loc='upper left', fontsize=7.8)
@@ -893,7 +918,7 @@ class Curves:
 
             # ---- Linha para terc_inf_val ----
             # vertical
-            plt.plot([terc_inf_val, terc_inf_val],[0, y_inf],
+            plt.plot([terc_inf_val, terc_inf_val],[PROB_Y_MIN, y_inf],
                 linestyle='--',color='black',linewidth=1)
 
             # horizontal até limite esquerdo do eixo x
@@ -905,7 +930,7 @@ class Curves:
 
             # ---- Linha para terc_sup_val ----
             # vertical
-            plt.plot([terc_sup_val, terc_sup_val],[0, y_sup],
+            plt.plot([terc_sup_val, terc_sup_val],[PROB_Y_MIN, y_sup],
                 linestyle='--',color='black',linewidth=1)
 
             # horizontal até limite esquerdo do eixo x
@@ -920,7 +945,7 @@ class Curves:
 
             plt.xlim(0, x_max)
 
-            plt.ylim(-0.05, 1.05)
+            plt.ylim(PROB_Y_MIN, PROB_Y_MAX)
             plt.grid(False)
 
             leg = plt.legend(loc='upper right', fontsize=7.8)
@@ -1075,7 +1100,7 @@ class Curves:
 
             # ---- Linha para terc_inf_val ----
             # vertical
-            plt.plot([terc_inf_val, terc_inf_val],[0, y_inf],
+            plt.plot([terc_inf_val, terc_inf_val],[PROB_Y_MIN, y_inf],
                 linestyle='--',color='black',linewidth=1)
 
             # horizontal até limite esquerdo do eixo x
@@ -1087,7 +1112,7 @@ class Curves:
 
             # ---- Linha para terc_sup_val ----
             # vertical
-            plt.plot([terc_sup_val, terc_sup_val],[0, y_sup],
+            plt.plot([terc_sup_val, terc_sup_val],[PROB_Y_MIN, y_sup],
                 linestyle='--',color='black',linewidth=1)
 
             # horizontal até limite esquerdo do eixo x
@@ -1104,7 +1129,8 @@ class Curves:
                     terc_inf_val,terc_sup_val])
 
             plt.xlim(x_min, x_max)
-            plt.ylim(-0.05, 1.05)
+            plt.ylim(PROB_Y_MIN, PROB_Y_MAX)
+            _format_temperature_xaxis()
             plt.grid(False)
 
             leg = plt.legend(loc='upper left', fontsize=7.8)
@@ -1179,7 +1205,7 @@ class Curves:
 
             # ---- Linha para terc_inf_val ----
             # vertical
-            plt.plot([terc_inf_val, terc_inf_val],[0, y_inf],
+            plt.plot([terc_inf_val, terc_inf_val],[PROB_Y_MIN, y_inf],
                 linestyle='--',color='black',linewidth=1)
 
             # horizontal até limite esquerdo do eixo x
@@ -1191,7 +1217,7 @@ class Curves:
 
             # ---- Linha para terc_sup_val ----
             # vertical
-            plt.plot([terc_sup_val, terc_sup_val],[0, y_sup],
+            plt.plot([terc_sup_val, terc_sup_val],[PROB_Y_MIN, y_sup],
                 linestyle='--',color='black',linewidth=1)
 
             # horizontal até limite esquerdo do eixo x
@@ -1208,7 +1234,8 @@ class Curves:
                     terc_inf_val,terc_sup_val])
 
             plt.xlim(x_min, x_max)
-            plt.ylim(-0.05, 1.05)
+            plt.ylim(PROB_Y_MIN, PROB_Y_MAX)
+            _format_temperature_xaxis()
             plt.grid(False)
 
             leg = plt.legend(loc='upper right', fontsize=7.8)
