@@ -6,6 +6,7 @@ from pathlib import Path
 
 from src.config.config_logging import setup_logging
 from src.config.config_models import get_multimodel_version
+from src.config.c3s_versions import update_c3s_model_versions
 from src.config.loader import PARAMETERS_RUN
 from src.config.paths import PATH_POSPROC
 from src.run.main_curves import CurvesRunConfig, run_curves
@@ -81,6 +82,12 @@ def main() -> None:
 
     setup_logging(args.year, args.month)
     logger = logging.getLogger(__name__)
+
+    if args.base == "copernicus":
+        try:
+            update_c3s_model_versions(args.model, logger)
+        except Exception as e:
+            logger.warning("Nao foi possivel checar versoes C3S: %s", e)
 
     logger.info(
         "Iniciando pipeline operacional: base=%s year=%s month=%s",

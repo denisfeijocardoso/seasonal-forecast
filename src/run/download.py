@@ -1,6 +1,8 @@
 from src.data.download_data import download_hcstfile_nmme, download_hcstfile_copernicus
 from src.data.download_data import download_realtime_nmme, download_realtime_copernicus
 from src.config.loader import VARIABLES_CONFIG, PARAMETERS_RUN
+from src.config.paths import PATH_HCST
+from src.config.config_models import build_model_dir_name, get_list_models
 
 def run_download_realtime_models(
     base: str,
@@ -57,8 +59,6 @@ def download_hindcast_c3s(
     ):
     """ Executa o download dos hindcasts do Copernicus Climate Data Store (C3S),
     para todo o período climatológico, dado um modelo, variável e mês específicos."""
-    
-    var_name_in_base = VARIABLES_CONFIG[var]["copernicus"]["variable"]
 
     #Define climatology
     years_climatology = PARAMETERS_RUN["bases"]["copernicus"]["climatology"]
@@ -73,7 +73,7 @@ def download_hindcast_c3s(
             month_fcst, 
             month_fcst, 
             model, 
-            var_name_in_base
+            var
         )
 
 def download_hindcast_nmme(        
@@ -102,3 +102,83 @@ def download_hindcast_nmme(
 
 
     # print("Interpolando os dados de previsão hindcast dos modelos para a mesma grade da observação (GPCP)")  
+
+
+def find_missing_c3s_hindcasts() -> dict[str, dict[str, list[int]]]:
+    """Lista meses de hindcast Copernicus faltantes por modelo e variável.
+
+    Checa somente os arquivos originais, sem o sufixo ``_interp``. A interpolação
+    deve ser executada depois do download dos NetCDF brutos.
+    """
+
+    models = get_list_models("copernicus")
+    variables = PARAMETERS_RUN["variables"]
+
+    years_climatology = PARAMETERS_RUN["bases"]["copernicus"]["climatology"]
+    start_year = years_climatology["start_year"]
+    end_year = years_climatology["end_year"]
+
+    missing: dict[str, dict[str, list[int]]] = {}
+
+    for model in models:
+        model_dir = build_model_dir_name(model)
+
+        for var in variables:
+            missing_months = []
+
+            for month in range(1, 13):
+                month_is_complete = True
+
+                for year in range(start_year, end_year + 1):
+                    file_path = (
+                        PATH_HCST
+                        / "copernicus"
+                        / model_dir
+                        / str(year)
+                        / f"{var}_monthly_{model_dir}_hcst_{year}{month:02d}01.nc"
+                    )
+
+                    if not file_path.exists():
+                        month_is_complete = False
+                        break
+
+                if not month_is_complete:
+                    missing_months.append(month)
+
+            if missing_months:
+                missing.setdefault(model, {})[var] = missing_months
+
+    return missing
+
+
+def main() -> None:
+    missing = find_missing_c3s_hindcasts()
+
+    if not missing:
+        print("Nenhum hindcast Copernicus faltante encontrado.")
+        return
+
+    print("Hindcasts Copernicus faltantes:")
+    for model, vars_missing in missing.items():
+        model_dir = build_model_dir_name(model)
+        print(f"\n{model} ({model_dir})")
+
+        for var, months in vars_missing.items():
+            months_str = ", ".join(f"{month:02d}" for month in months)
+            print(f"  {var}: {months_str}")
+
+    print("\nIniciando downloads...")
+
+    for model, vars_missing in missing.items():
+        for var, months in vars_missing.items():
+            for month in months:
+                print(f"Baixando {model} {var} mes {month:02d}")
+                download_hindcast_c3s(
+                    model=model,
+                    var=var,
+                    month_fcst=month,
+                )
+
+
+if __name__ == "__main__":
+    main()

@@ -21,6 +21,8 @@ url_gpcp = "https://psl.noaa.gov/thredds/fileServer/Datasets/gpcp/precip.mon.mea
 
 url_cmap = "https://psl.noaa.gov/thredds/fileServer/Datasets/cmap/std/precip.mon.mean.nc"
 
+
+
 #############
 #OBSERVATION#
 #############
@@ -85,6 +87,15 @@ def transform_and_split_time_obs(file, output_dir):
 ###########
 #HINDCASTS#
 ###########
+
+def get_originating_centre(model: str) -> str:
+    if model in ["eccc4", "eccc5"]:
+        return "eccc"
+    
+    if model == "meteofr":
+        return "meteo_france"
+    
+    return model
 
 def download_hcstfile_nmme(
         init_year: int, 
@@ -248,8 +259,8 @@ def download_hcstfile_copernicus(
             exist_ok = True
         )
 
-        # Centro de origem
-        origin_centre = "eccc" if model in ["eccc4", "eccc5"] else model
+        #Centro de origem
+        origin_centre = get_originating_centre(model)
 
         # Requisição
         request = {
@@ -294,6 +305,20 @@ def download_hcstfile_copernicus(
                 ).download(file_path)
 
             except Exception as e:
+
+                error_message = str(e)
+
+                if (
+                    "MarsNoDataError" in error_message
+                    or "MARS returned no data" in error_message
+                ):
+                    logger.warning(
+                        f"C3S: Sem dado no CDS/MARS para {model} "
+                        f"system={system_type}, var={var}, "
+                        f"{year_hcst}-{month_hcst}"
+                    )
+
+                    continue
 
                 logger.error(
                     f"C3S: Erro ao baixar {model} "
@@ -479,7 +504,8 @@ def download_realtime_copernicus(
         exist_ok = True
     )
     
-    origin_centre = "eccc" if model in ["eccc4", "eccc5"] else model
+    #Centro de origem
+    origin_centre = get_originating_centre(model)
 
     # Request do download
     request = {
