@@ -473,10 +473,9 @@ def render_map(
     )
     tick_size = 10 if style.tercile_colorbar_labels else 9
     colorbar.ax.tick_params(labelsize=tick_size)
-    if style.compact_colorbar_ticks:
-        colorbar.set_ticklabels(
-            [_format_compact_number(value) for value in style.levels]
-        )
+    colorbar.set_ticklabels(
+        [_format_compact_number(value) for value in style.levels]
+    )
     if style.tercile_colorbar_labels:
         _add_tercile_colorbar_labels(fig, ax, colorbar, colorbar_orientation)
 

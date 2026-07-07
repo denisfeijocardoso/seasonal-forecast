@@ -5,7 +5,6 @@ import logging
 import os
 
 from .download import run_download_realtime_models
-from .grads import run_grads_maps_realtime
 from .interpolation import run_interpolation_forecast_models
 from src.processing.realtime_products import build_realtime_products
 from src.config.config_logging import setup_logging
@@ -28,7 +27,6 @@ NO_DOWNLOAD_MODELS = {
 
 @dataclass(frozen=True)
 class MapTask:
-    backend: str
     base: str
     model: str
     var: str
@@ -49,7 +47,6 @@ class RealtimeRunConfig:
     skip_download: bool = False
     skip_interpolation: bool = False
     skip_products: bool = False
-    maps: str = "python"
     map_workers: int = min(4, os.cpu_count() or 1)
 
     @classmethod
@@ -65,7 +62,6 @@ class RealtimeRunConfig:
             skip_download=args.skip_download,
             skip_interpolation=args.skip_interpolation,
             skip_products=args.skip_products,
-            maps=args.maps,
             map_workers=args.map_workers,
         )
 
@@ -107,13 +103,6 @@ def parse_args() -> argparse.Namespace:
             "Pula o cálculo dos produtos e a escrita dos netCDFs, "
             "rodando apenas a geração dos mapas."
         ),
-    )
-
-    parser.add_argument(
-        "--maps",
-        choices=("python", "grads", "none"),
-        default="python",
-        help="Backend usado para gerar mapas.",
     )
 
     parser.add_argument(
@@ -202,7 +191,6 @@ def select_models_to_run(
 
 
 def generate_maps(
-    backend: str,
     base: str,
     model: str,
     var: str,
@@ -210,20 +198,6 @@ def generate_maps(
     year_fcst: int,
     month_fcst: int,
 ) -> int:
-    if backend == "none":
-        return 0
-
-    if backend == "grads":
-        run_grads_maps_realtime(
-            base,
-            model,
-            var,
-            calibration,
-            year_fcst,
-            month_fcst,
-        )
-        return 0
-
     generated = run_python_maps_realtime(
         base,
         model,
@@ -237,7 +211,6 @@ def generate_maps(
 
 def run_map_task(task: MapTask) -> int:
     return generate_maps(
-        task.backend,
         task.base,
         task.model,
         task.var,
@@ -256,7 +229,7 @@ def run_map_queue(
     if not tasks:
         return 0
 
-    if tasks[0].backend != "python" or workers <= 1:
+    if workers <= 1:
         generated = 0
         for task in tasks:
             generated += run_map_task(task)
@@ -442,7 +415,6 @@ def run_realtime(config: RealtimeRunConfig) -> None:
 
                 map_tasks.append(
                     MapTask(
-                        config.maps,
                         config.base,
                         model,
                         var,

@@ -24,6 +24,7 @@ class VerificationRunConfig:
     model: str = "all"
     calibration: str = "all"
     include_multimodel: bool = False
+    exclude_models: tuple[str, ...] = ()
 
     @classmethod
     def from_args(cls, args: argparse.Namespace) -> "VerificationRunConfig":
@@ -35,6 +36,7 @@ class VerificationRunConfig:
             model=args.model,
             calibration=args.calibration,
             include_multimodel=args.include_multimodel,
+            exclude_models=tuple(getattr(args, "exclude_model", []) or ()),
         )
 
 
@@ -54,6 +56,15 @@ def parse_args() -> argparse.Namespace:
         "--include-multimodel",
         action="store_true",
         help="Inclui o multimodelo na verificação.",
+    )
+    parser.add_argument(
+        "--exclude-model",
+        action="append",
+        default=[],
+        help=(
+            "Remove um modelo da rodada de verificacao. "
+            "Pode ser usado mais de uma vez."
+        ),
     )
 
     return parser.parse_args()
@@ -81,7 +92,10 @@ def run_verification(config: VerificationRunConfig) -> None:
 
     variables = select_variables(config.var)
     calibrations = select_calibrations(config.calibration)
-    models_available = get_models_available(config.base)
+    models_available = exclude_models(
+        get_models_available(config.base),
+        config.exclude_models,
+    )
     models_to_run = select_models_to_run(
         config.model,
         models_available,
@@ -89,13 +103,14 @@ def run_verification(config: VerificationRunConfig) -> None:
     )
 
     logger.info(
-        "Verificacao iniciada: base=%s year=%s month=%s variables=%s models=%s calibrations=%s",
+        "Verificacao iniciada: base=%s year=%s month=%s variables=%s models=%s calibrations=%s excluded_models=%s",
         config.base,
         config.year,
         config.month,
         variables,
         models_to_run,
         calibrations,
+        list(config.exclude_models),
     )
 
     for var in variables:
@@ -162,6 +177,18 @@ def get_models_available(base: str) -> list[str]:
         models_available.append("bam")
 
     return models_available
+
+
+def exclude_models(
+    models: list[str],
+    excluded_models: tuple[str, ...] | list[str],
+) -> list[str]:
+    excluded = set(excluded_models)
+    return [
+        model
+        for model in models
+        if model not in excluded
+    ]
 
 
 def select_models_to_run(

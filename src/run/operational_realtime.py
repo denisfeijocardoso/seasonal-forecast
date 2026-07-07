@@ -8,8 +8,8 @@ from src.config.config_logging import setup_logging
 from src.config.config_models import get_multimodel_version
 from src.config.c3s_versions import update_c3s_model_versions
 from src.config.paths import PATH_POSPROC
-from src.run.main_curves import CurvesRunConfig, run_curves
-from src.run.main_realtime import RealtimeRunConfig, run_realtime
+from src.run.curves import CurvesRunConfig, run_curves
+from src.run.realtime import RealtimeRunConfig, run_realtime
 from src.run.common import select_calibrations, select_variables, validate_month
 
 
@@ -30,17 +30,17 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--skip-download",
         action="store_true",
-        help="Repassa --skip-download para main_realtime.",
+        help="Repassa --skip-download para realtime.",
     )
     parser.add_argument(
         "--skip-interpolation",
         action="store_true",
-        help="Repassa --skip-interpolation para main_realtime.",
+        help="Repassa --skip-interpolation para realtime.",
     )
     parser.add_argument(
         "--skip-products",
         action="store_true",
-        help="Repassa --skip-products para main_realtime.",
+        help="Repassa --skip-products para realtime.",
     )
     existing_curves_group = parser.add_mutually_exclusive_group()
     existing_curves_group.add_argument(
@@ -57,7 +57,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--skip-realtime",
         action="store_true",
-        help="Pula main_realtime e segue para validacao/curvas.",
+        help="Pula realtime e segue para validacao/curvas.",
     )
     parser.add_argument(
         "--skip-validation",
@@ -67,7 +67,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--skip-curves",
         action="store_true",
-        help="Pula main_curves.",
+        help="Pula curves.",
     )
 
     return parser.parse_args()
@@ -128,7 +128,7 @@ def run_operational_realtime(args: argparse.Namespace) -> None:
 
 def run_realtime_step(args: argparse.Namespace) -> None:
     logger = logging.getLogger(__name__)
-    logger.info("Executando etapa: main_realtime")
+    logger.info("Executando etapa: realtime")
     run_realtime(
         RealtimeRunConfig(
             base=args.base,
@@ -144,12 +144,12 @@ def run_realtime_step(args: argparse.Namespace) -> None:
             map_workers=args.map_workers,
         )
     )
-    logger.info("Etapa concluida: main_realtime")
+    logger.info("Etapa concluida: realtime")
 
 
 def run_curves_step(args: argparse.Namespace) -> None:
     logger = logging.getLogger(__name__)
-    logger.info("Executando etapa: main_curves")
+    logger.info("Executando etapa: curves")
     run_curves(
         CurvesRunConfig(
             base=args.base,
@@ -159,7 +159,7 @@ def run_curves_step(args: argparse.Namespace) -> None:
             skip_existing=not args.overwrite_curves,
         )
     )
-    logger.info("Etapa concluida: main_curves")
+    logger.info("Etapa concluida: curves")
 
 
 def validate_multimodel_outputs(

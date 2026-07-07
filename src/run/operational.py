@@ -5,8 +5,8 @@ import logging
 
 from src.config.config_logging import setup_logging
 from src.run.common import validate_month
-from src.run.main_operational_realtime import run_operational_realtime
-from src.run.main_operational_verification import run_operational_verification
+from src.run.operational_realtime import run_operational_realtime
+from src.run.operational_verification import run_operational_verification
 
 
 def parse_args() -> argparse.Namespace:
@@ -26,17 +26,17 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--skip-download",
         action="store_true",
-        help="Repassa --skip-download para main_operational_realtime.",
+        help="Repassa --skip-download para operational_realtime.",
     )
     parser.add_argument(
         "--skip-interpolation",
         action="store_true",
-        help="Repassa --skip-interpolation para main_operational_realtime.",
+        help="Repassa --skip-interpolation para operational_realtime.",
     )
     parser.add_argument(
         "--skip-products",
         action="store_true",
-        help="Repassa --skip-products para main_operational_realtime.",
+        help="Repassa --skip-products para operational_realtime.",
     )
     existing_curves_group = parser.add_mutually_exclusive_group()
     existing_curves_group.add_argument(
@@ -53,7 +53,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--skip-realtime",
         action="store_true",
-        help="Pula main_operational_realtime.",
+        help="Pula operational_realtime.",
     )
     parser.add_argument(
         "--skip-validation",
@@ -63,17 +63,56 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--skip-curves",
         action="store_true",
-        help="Pula main_curves no realtime.",
+        help="Pula curves no realtime.",
     )
     parser.add_argument(
         "--run-verification",
         action="store_true",
-        help="Executa tambem main_operational_verification.",
+        help="Executa tambem operational_verification.",
     )
     parser.add_argument(
         "--skip-multimodel-verification",
         action="store_true",
         help="Nao inclui o multimodelo na verificacao operacional.",
+    )
+    parser.add_argument(
+        "--exclude-verification-model",
+        action="append",
+        default=[],
+        help=(
+            "Remove um modelo apenas da verificacao operacional. "
+            "Pode ser usado mais de uma vez."
+        ),
+    )
+    parser.add_argument(
+        "--overwrite-verification-maps",
+        action="store_true",
+        help="Refaz mapas de verificacao mesmo quando a figura ja existe.",
+    )
+    parser.add_argument(
+        "--skip-verification-download",
+        action="store_true",
+        help="Pula o download dos hindcasts em operational_verification.",
+    )
+    parser.add_argument(
+        "--skip-verification-interpolation",
+        action="store_true",
+        help="Pula a interpolacao dos hindcasts em operational_verification.",
+    )
+    parser.add_argument(
+        "--skip-verification-products",
+        action="store_true",
+        help="Pula o calculo/escrita das metricas em operational_verification.",
+    )
+    parser.add_argument(
+        "--skip-verification-maps",
+        action="store_true",
+        help="Pula mapas em operational_verification.",
+    )
+    parser.add_argument(
+        "--verification-only-maps",
+        action="store_true",
+        help="Roda apenas os mapas em operational_verification.",
     )
 
     return parser.parse_args()
@@ -108,6 +147,14 @@ def main() -> None:
             model=args.model,
             calibration=args.calibration,
             skip_multimodel=args.skip_multimodel_verification,
+            map_workers=args.map_workers,
+            overwrite_maps=args.overwrite_verification_maps,
+            skip_download=args.skip_verification_download,
+            skip_interpolation=args.skip_verification_interpolation,
+            skip_verification=args.skip_verification_products,
+            skip_maps=args.skip_verification_maps,
+            only_maps=args.verification_only_maps,
+            exclude_model=args.exclude_verification_model,
         )
         run_operational_verification(verification_args)
 

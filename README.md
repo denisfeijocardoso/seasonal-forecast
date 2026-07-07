@@ -34,7 +34,7 @@ src/
   io/            Escrita de NetCDFs, caminhos e README de versao
   observation/   Estatisticas observacionais
   plotting/      Mapas em Python e recursos de plotagem
-  processing/    Agregacoes mensais e sazonais
+  processing/    Agregacoes mensais/sazonais e montagem de produtos
   run/           Entrypoints executaveis
   verification/  Rotinas de verificacao
 
@@ -67,48 +67,62 @@ Ao mudar a versao do multimodelo no YAML, o pipeline passa a escrever em `v2`, `
 O entrypoint recomendado e:
 
 ```bash
-python -m src.run.main_operational --base nmme --year 2026 --month 6
+python -m src.run.operational --base nmme --year 2026 --month 6
 ```
 
 Ele executa:
 
-1. `main_realtime`: download, interpolacao, produtos NetCDF, README da versao e mapas;
+1. `realtime`: download, interpolacao, produtos NetCDF, README da versao e mapas;
 2. validacao minima dos NetCDFs do multimodelo;
-3. `main_curves`: curvas do multimodelo por ponto.
+3. `curves`: curvas do multimodelo por ponto.
+
+Opcionalmente, com `--run-verification`, tambem executa `operational_verification`.
 
 Exemplo para uma variavel:
 
 ```bash
-python -m src.run.main_operational --base nmme --year 2026 --month 6 --var prec
+python -m src.run.operational --base nmme --year 2026 --month 6 --var prec
 ```
 
 Retomar apenas curvas, usando NetCDFs ja existentes:
 
 ```bash
-python -m src.run.main_operational --base nmme --year 2026 --month 6 --skip-realtime
+python -m src.run.operational --base nmme --year 2026 --month 6 --skip-realtime
 ```
 
 Pular curvas:
 
 ```bash
-python -m src.run.main_operational --base nmme --year 2026 --month 6 --skip-curves
+python -m src.run.operational --base nmme --year 2026 --month 6 --skip-curves
 ```
 
 Refazer curvas ja existentes:
 
 ```bash
-python -m src.run.main_operational --base nmme --year 2026 --month 6 --overwrite-curves
+python -m src.run.operational --base nmme --year 2026 --month 6 --overwrite-curves
+```
+
+Rodar tambem a verificacao operacional e seus mapas:
+
+```bash
+python -m src.run.operational --base nmme --year 2026 --month 6 --run-verification
+```
+
+Rodar tambem a verificacao operacional excluindo um modelo apenas da etapa de verificacao:
+
+```bash
+python -m src.run.operational --base nmme --year 2026 --month 6 --run-verification --exclude-verification-model cansips
+```
+
+Rodar somente verificacao operacional:
+
+```bash
+python -m src.run.operational --base nmme --year 2026 --month 6 --skip-realtime --run-verification
 ```
 
 ## Mapas
 
-Por padrao, os mapas sao gerados com backend Python:
-
-```bash
---maps python
-```
-
-A geracao de mapas e enfileirada apos a escrita dos NetCDFs e pode rodar em paralelo:
+A geracao de mapas usa Python, e e enfileirada apos a escrita dos NetCDFs. A fila pode rodar em paralelo:
 
 ```bash
 --map-workers 4
@@ -116,24 +130,18 @@ A geracao de mapas e enfileirada apos a escrita dos NetCDFs e pode rodar em para
 
 Mapas ja existentes sao pulados automaticamente.
 
-O backend GrADS ainda esta disponivel para comparacao/transicao:
-
-```bash
---maps grads
-```
-
 ## Curvas
 
 As curvas do multimodelo sao geradas por:
 
 ```bash
-python -m src.run.main_curves --base nmme --year 2026 --month 6
+python -m src.run.curves --base nmme --year 2026 --month 6
 ```
 
 Por padrao, curvas ja existentes sao puladas. Para sobrescrever:
 
 ```bash
-python -m src.run.main_curves --base nmme --year 2026 --month 6 --overwrite
+python -m src.run.curves --base nmme --year 2026 --month 6 --overwrite
 ```
 
 ## Execucao Realtime Direta
@@ -141,27 +149,83 @@ python -m src.run.main_curves --base nmme --year 2026 --month 6 --overwrite
 Para rodar apenas a etapa realtime:
 
 ```bash
-python -m src.run.main_realtime --base nmme --year 2026 --month 6
+python -m src.run.realtime --base nmme --year 2026 --month 6
 ```
 
 Rodar so uma variavel:
 
 ```bash
-python -m src.run.main_realtime --base nmme --year 2026 --month 6 --var t2mt
+python -m src.run.realtime --base nmme --year 2026 --month 6 --var t2mt
 ```
 
 Rodar mapas a partir de NetCDFs ja existentes:
 
 ```bash
-python -m src.run.main_realtime --base nmme --year 2026 --month 6 --skip-products
+python -m src.run.realtime --base nmme --year 2026 --month 6 --skip-products
+```
+
+## Verificacao Operacional
+
+Para baixar/interpolar hindcasts, rodar a verificacao e gerar mapas das metricas:
+
+```bash
+python -m src.run.operational_verification --base nmme --year 2026 --month 6
+```
+
+Para reaproveitar hindcasts ja baixados/interpolados:
+
+```bash
+python -m src.run.operational_verification --base nmme --year 2026 --month 6 --skip-download --skip-interpolation
+```
+
+Para reaproveitar hindcasts ja baixados/interpolados e excluir temporariamente um modelo do multimodelo/verificacao:
+
+```bash
+python -m src.run.operational_verification --base nmme --year 2026 --month 6 --skip-download --skip-interpolation --exclude-model cansips
+```
+
+Para rodar apenas os mapas a partir dos NetCDFs de verificacao existentes:
+
+```bash
+python -m src.run.operational_verification --base nmme --year 2026 --month 6 --only-maps
+```
+
+Para rodar apenas os mapas de verificacao de um modelo/calibracao especificos via pipeline operacional:
+
+```bash
+python -m src.run.operational --base nmme --year 2026 --month 2 --model canesm --calibration regr --skip-realtime --run-verification --verification-only-maps
+```
+
+Para pular mapas:
+
+```bash
+python -m src.run.operational_verification --base nmme --year 2026 --month 6 --skip-maps
+```
+
+Para rodar apenas o calculo/escrita das metricas, sem download, interpolacao e mapas:
+
+```bash
+python -m src.run.verification --base nmme --year 2026 --month 6
 ```
 
 ## Visualizador Streamlit
 
-Para visualizar figuras geradas:
+Para visualizar mapas de forecast:
 
 ```bash
 streamlit run streamlit/app.py
+```
+
+Para visualizar mapas de verificacao:
+
+```bash
+streamlit run streamlit/verification_app.py
+```
+
+Para visualizar curvas por ponto:
+
+```bash
+streamlit run streamlit/curves_app.py
 ```
 
 O app procura figuras em `PATH_FIG`, definido em:
@@ -178,10 +242,22 @@ Produtos NetCDF:
 /dados/mmclima/multimodelo/seasonal/posproc/<base>/<versao>/forecast/<calibracao>/<modelo>/<ano>/<data>
 ```
 
+Produtos NetCDF de verificacao:
+
+```text
+/dados/mmclima/multimodelo/seasonal/posproc/<base>/<versao>/verification/<calibracao>/<modelo>
+```
+
 Figuras:
 
 ```text
 /dados/mmclima/multimodelo/seasonal/figures/<base>/<versao>/forecast/<calibracao>/<modelo>/<ano>/<data>
+```
+
+Figuras de verificacao:
+
+```text
+/dados/mmclima/multimodelo/seasonal/figures/<base>/<versao>/verification/<calibracao>/<modelo>
 ```
 
 README da versao do multimodelo:
