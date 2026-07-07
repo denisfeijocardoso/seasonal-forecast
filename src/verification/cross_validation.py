@@ -1,10 +1,31 @@
+import os
+from concurrent.futures import ProcessPoolExecutor
+from dataclasses import dataclass
+
 import xarray as xr
 
 from src.calibration.cox import get_cox_calibration_results
-from src.calibration.linear_regression import get_linear_regression_calibr_results
+from src.calibration.linear_regression import (
+    get_linear_regression_verification_results,
+)
 from src.config.loader import get_climatology_period, get_periods_aggregation
 from src.hindcast import Hindcast
 from src.observation import Observation
+
+
+@dataclass
+class CrossValidationContext:
+    base: str
+    model: str
+    var: str
+    month_hcst: int
+    models_available: list[str]
+    years: list[int]
+    periods: list[str]
+    obs_all_years: dict[str, xr.DataArray]
+    hcst_all_years: dict[str, xr.DataArray]
+    regr_correlations: dict[str, xr.DataArray]
+    nocalib_members: dict[str, dict[str, xr.DataArray]]
 
 
 def get_cross_validation_years(base: str) -> list[int]:
@@ -27,6 +48,32 @@ def run_cross_validation(
     mesmo contrato das rotinas de calibração do realtime.
     """
 
+    context = build_cross_validation_context(
+        base=base,
+        model=model,
+        var=var,
+        month_hcst=month_hcst,
+        models_available=models_available,
+        include_nocalib_members=(type_calibration == "nocalib"),
+        include_regr_correlations=(type_calibration == "regr"),
+    )
+
+    return run_cross_validation_for_calibration(
+        context,
+        type_calibration,
+    )
+
+
+def build_cross_validation_context(
+    base: str,
+    model: str,
+    var: str,
+    month_hcst: int,
+    models_available: list[str],
+    include_nocalib_members: bool = False,
+    include_regr_correlations: bool = False,
+) -> CrossValidationContext:
+
     years = get_cross_validation_years(base)
     periods = get_periods_aggregation()
 
@@ -44,32 +91,97 @@ def run_cross_validation(
     )
 
     obs_all_years = obs.calculate_periods_all_years()
+    hcst_all_years = hindcast.get_hindcast(model)
+    regr_correlations = (
+        compute_leave_one_out_correlations(
+            obs_all_years,
+            hcst_all_years,
+        )
+        if include_regr_correlations
+        else {}
+    )
+    nocalib_members = (
+        load_nocalib_members(
+            hindcast,
+            model,
+        )
+        if include_nocalib_members
+        else {}
+    )
+
+    return CrossValidationContext(
+        base=base,
+        model=model,
+        var=var,
+        month_hcst=month_hcst,
+        models_available=models_available,
+        years=years,
+        periods=periods,
+        obs_all_years=obs_all_years,
+        hcst_all_years=hcst_all_years,
+        regr_correlations=regr_correlations,
+        nocalib_members=nocalib_members,
+    )
+
+
+def run_cross_validation_for_calibration(
+    context: CrossValidationContext,
+    type_calibration: str,
+) -> dict[str, dict[str, dict[str, xr.DataArray]]]:
+
+    if type_calibration == "cox":
+        max_workers = max(1, (os.cpu_count() or 1) // 2)
+
+        with ProcessPoolExecutor(max_workers=max_workers) as executor:
+            return run_cross_validation_for_calibration_loop(
+                context,
+                type_calibration,
+                executor,
+            )
+
+    return run_cross_validation_for_calibration_loop(
+        context,
+        type_calibration,
+    )
+
+
+def run_cross_validation_for_calibration_loop(
+    context: CrossValidationContext,
+    type_calibration: str,
+    cox_executor: ProcessPoolExecutor | None = None,
+) -> dict[str, dict[str, dict[str, xr.DataArray]]]:
 
     results_by_year = []
     obs_by_year = []
 
-    for target_year in years:
+    for target_year in context.years:
 
-        obs_statistics = obs.compute_statistics(
-            exclude_year=target_year
+        obs_statistics = compute_obs_statistics(
+            context.obs_all_years,
+            target_year,
         )
 
-        hcst_statistics = hindcast.compute_statistics(
-            model,
-            exclude_year=target_year
+        hcst_statistics = compute_hcst_statistics(
+            context.hcst_all_years,
+            target_year,
         )
 
-        hcst_target = hindcast.get_hindcast_target(
-            model,
-            target_year
+        hcst_target = select_target_year(
+            context.hcst_all_years,
+            target_year,
         )
 
         if type_calibration == "regr":
-            results = get_linear_regression_calibr_results(
+            correlations = select_target_year(
+                context.regr_correlations,
+                target_year,
+            ) if context.regr_correlations else None
+
+            results = get_linear_regression_verification_results(
                 obs_statistics,
                 hcst_statistics,
                 hcst_target,
-                var,
+                correlations,
             )
 
         elif type_calibration == "cox":
@@ -77,16 +189,22 @@ def run_cross_validation(
                 obs_statistics,
                 hcst_statistics,
                 hcst_target,
-                compute_prec_products=(var == "prec"),
+                compute_prec_products=(context.var == "prec"),
+                executor=cox_executor,
             )
 
         elif type_calibration == "nocalib":
+            if not context.nocalib_members:
+                raise ValueError(
+                    "Membros do hindcast nao carregados para nocalib."
+                )
+
             results = compute_nocalib_cross_validation_year(
-                hindcast,
-                model,
+                context.model,
                 target_year,
-                obs_statistics,
                 hcst_statistics,
+                hcst_target,
+                context.nocalib_members,
             )
 
         else:
@@ -101,7 +219,7 @@ def run_cross_validation(
         obs_by_year.append(
             add_year_dimension(
                 build_observation_reference(
-                    obs_all_years,
+                    context.obs_all_years,
                     obs_statistics,
                     target_year,
                 ),
@@ -112,62 +230,213 @@ def run_cross_validation(
     return {
         "forecast": concat_year_results(
             results_by_year,
-            periods,
+            context.periods,
         ),
         "obs": concat_year_results(
             obs_by_year,
-            periods,
+            context.periods,
         ),
     }
 
 
-def compute_nocalib_cross_validation_year(
+def compute_obs_statistics(
+    obs_all_years: dict[str, xr.DataArray],
+    exclude_year: int,
+) -> dict[str, dict[str, xr.DataArray]]:
+
+    obs_statistics = {}
+
+    for period, da in obs_all_years.items():
+
+        climatology = da.drop_sel(
+            year=exclude_year,
+            errors="ignore",
+        )
+
+        mean = climatology.mean("year")
+        q1 = climatology.quantile(0.25, "year")
+        q3 = climatology.quantile(0.75, "year")
+
+        obs_statistics[period] = {
+            "total": climatology,
+            "mean": mean,
+            "median": climatology.median("year"),
+            "std": climatology.std("year"),
+            "tinf": climatology.quantile(0.33, "year"),
+            "tsup": climatology.quantile(0.66, "year"),
+            "iqr": q3 - q1,
+            "anom": climatology - mean,
+        }
+
+    return obs_statistics
+
+
+def compute_hcst_statistics(
+    hcst_all_years: dict[str, xr.DataArray],
+    exclude_year: int,
+) -> dict[str, dict[str, xr.DataArray]]:
+
+    hcst_statistics = {}
+
+    for period, da in hcst_all_years.items():
+
+        climatology = da.drop_sel(
+            year=exclude_year,
+            errors="ignore",
+        )
+
+        mean = climatology.mean("year")
+
+        hcst_statistics[period] = {
+            "mean": mean,
+            "std": climatology.std("year"),
+            "anom": climatology - mean,
+        }
+
+    return hcst_statistics
+
+
+def compute_leave_one_out_correlations(
+    obs_all_years: dict[str, xr.DataArray],
+    hcst_all_years: dict[str, xr.DataArray],
+) -> dict[str, xr.DataArray]:
+
+    return {
+        period: compute_leave_one_out_correlation_period(
+            obs_all_years[period],
+            hcst_all_years[period],
+        )
+        for period in obs_all_years
+    }
+
+
+def compute_leave_one_out_correlation_period(
+    obs: xr.DataArray,
+    hcst: xr.DataArray,
+) -> xr.DataArray:
+
+    obs, hcst = xr.align(
+        obs,
+        hcst,
+        join="inner",
+    )
+
+    valid = obs.notnull() & hcst.notnull()
+    count = valid.sum("year")
+
+    obs_valid = obs.where(valid)
+    hcst_valid = hcst.where(valid)
+
+    sum_obs = obs_valid.sum("year", skipna=True)
+    sum_hcst = hcst_valid.sum("year", skipna=True)
+    sum_obs2 = (obs_valid ** 2).sum("year", skipna=True)
+    sum_hcst2 = (hcst_valid ** 2).sum("year", skipna=True)
+    sum_cross = (obs_valid * hcst_valid).sum("year", skipna=True)
+
+    valid_year = valid.astype(int)
+    count_loo = count - valid_year
+
+    obs_fill = obs_valid.fillna(0)
+    hcst_fill = hcst_valid.fillna(0)
+
+    sum_obs_loo = sum_obs - obs_fill
+    sum_hcst_loo = sum_hcst - hcst_fill
+    sum_obs2_loo = sum_obs2 - obs_fill ** 2
+    sum_hcst2_loo = sum_hcst2 - hcst_fill ** 2
+    sum_cross_loo = sum_cross - obs_fill * hcst_fill
+
+    covariance = sum_cross_loo - (
+        sum_obs_loo * sum_hcst_loo / count_loo
+    )
+    variance_obs = sum_obs2_loo - (
+        sum_obs_loo ** 2 / count_loo
+    )
+    variance_hcst = sum_hcst2_loo - (
+        sum_hcst_loo ** 2 / count_loo
+    )
+
+    correlation = covariance / (variance_obs * variance_hcst) ** 0.5
+
+    return (
+        correlation
+        .where(
+            (count_loo >= 2)
+            & (variance_obs > 0)
+            & (variance_hcst > 0)
+        )
+        .fillna(0)
+        .clip(min=0)
+    )
+
+
+def select_target_year(
+    all_years: dict[str, xr.DataArray],
+    target_year: int,
+) -> dict[str, xr.DataArray]:
+
+    return {
+        period: da.sel(year=target_year)
+        for period, da in all_years.items()
+    }
+
+
+def load_nocalib_members(
     hindcast: Hindcast,
     model: str,
+) -> dict[str, dict[str, xr.DataArray]]:
+
+    models = (
+        hindcast.models_available
+        if model == "multimodel"
+        else [model]
+    )
+
+    return {
+        mdl: hindcast.load_years_climatology_members(mdl)
+        for mdl in models
+    }
+
+
+def compute_nocalib_cross_validation_year(
+    model: str,
     target_year: int,
-    obs_statistics: dict[str, dict[str, xr.DataArray]],
     hcst_statistics: dict[str, dict[str, xr.DataArray]],
+    target: dict[str, xr.DataArray],
+    members_by_model: dict[str, dict[str, xr.DataArray]],
 ) -> dict[str, dict[str, xr.DataArray]]:
 
     if model == "multimodel":
         return compute_nocalib_multimodel_year(
-            hindcast,
             target_year,
-            obs_statistics,
             hcst_statistics,
+            target,
+            members_by_model,
         )
 
     return compute_nocalib_model_year(
-        hindcast,
-        model,
+        members_by_model[model],
+        target,
         target_year,
-        obs_statistics,
         hcst_statistics,
     )
 
 
 def compute_nocalib_multimodel_year(
-    hindcast: Hindcast,
     target_year: int,
-    obs_statistics: dict[str, dict[str, xr.DataArray]],
     hcst_statistics: dict[str, dict[str, xr.DataArray]],
+    target: dict[str, xr.DataArray],
+    members_by_model: dict[str, dict[str, xr.DataArray]],
 ) -> dict[str, dict[str, xr.DataArray]]:
 
     member_results = [
         compute_nocalib_model_year(
-            hindcast,
-            model,
+            members,
+            select_target_year(members, target_year),
             target_year,
-            obs_statistics,
             hcst_statistics,
         )
-        for model in hindcast.models_available
+        for members in members_by_model.values()
     ]
-
-    target = hindcast.get_hindcast_target(
-        "multimodel",
-        target_year,
-    )
 
     results = {}
 
@@ -195,15 +464,11 @@ def compute_nocalib_multimodel_year(
 
 
 def compute_nocalib_model_year(
-    hindcast: Hindcast,
-    model: str,
+    members: dict[str, xr.DataArray],
+    target: dict[str, xr.DataArray],
     target_year: int,
-    obs_statistics: dict[str, dict[str, xr.DataArray]],
     hcst_statistics: dict[str, dict[str, xr.DataArray]],
 ) -> dict[str, dict[str, xr.DataArray]]:
-
-    members = hindcast.load_years_climatology_members(model)
-    target = hindcast.get_hindcast_target(model, target_year)
 
     results = {}
 

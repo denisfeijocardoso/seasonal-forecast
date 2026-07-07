@@ -62,7 +62,7 @@ class Forecast:
         if (
             self.base == "copernicus" 
             and self.var == "prec"
-            and model not in ("bam12","echam")
+            and model not in ("bam", "echam")
         ): 
             da = (da * 1000  * 86400)
 

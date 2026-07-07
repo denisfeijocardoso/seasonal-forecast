@@ -209,20 +209,20 @@ def update_c3s_model_versions(model_arg: str, logger=None) -> list[dict]:
 
             if result["skipped"]:
                 logger.warning(
-                    "Versao C3S nao verificada: %s (%s)",
+                    "Versão dos modelos C3S não verificada: %s (%s)",
                     model,
                     result["reason"],
                 )
             elif result["updated"]:
                 logger.info(
-                    "Versao C3S atualizada: %s %s -> %s",
+                    "Versão dos modelos C3S atualizada: %s %s -> %s",
                     model,
                     result["old"],
                     result["new"],
                 )
             else:
                 logger.info(
-                    "Versao C3S ja atualizada: %s system=%s",
+                    "Versão dos modelos C3S se mantem: %s system=%s",
                     model,
                     result["new"],
                 )

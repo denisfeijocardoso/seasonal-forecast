@@ -101,7 +101,7 @@ def build_verification_output_path(
     return (
         PATH_POSPROC /
         base /
-        f"v{version_multimodel}" /
+        version_multimodel /
         "verification" /
         type_calibration /
         name_model_dir
@@ -181,6 +181,9 @@ def prepare_dataarray(
     da = data.copy()
 
     if "year" in da.dims:
+        if "time" in da.coords and "time" not in da.dims:
+            da = da.drop_vars("time")
+
         da = da.rename({"year": "time"})
         da["time"].attrs.update({
             "long_name": "cross-validation target year",

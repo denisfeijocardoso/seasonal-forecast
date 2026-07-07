@@ -666,7 +666,8 @@ def compute_calibration_period(
     obs_stats: dict[str, xr.DataArray], 
     hcst_stats: dict[str, xr.DataArray], 
     realtime_forecast: xr.DataArray,
-    compute_prec_products: bool = False
+    compute_prec_products: bool = False,
+    executor: ProcessPoolExecutor | None = None,
 ) -> dict[str, xr.DataArray]:
     ''' Calibração das previsões em tempo-real através do método de regressão linear'''
 
@@ -685,44 +686,24 @@ def compute_calibration_period(
         compute_prec_products
     )                        
 
-    max_workers = max(1, os.cpu_count() // 2)
+    if executor is None:
+        max_workers = max(1, (os.cpu_count() or 1) // 2)
 
-    with ProcessPoolExecutor(max_workers = max_workers) as executor:
-
-        futures = {
-
-            executor.submit(
-                process_latitude,
-                ilat,
+        with ProcessPoolExecutor(max_workers=max_workers) as local_executor:
+            fill_outputs_from_executor(
+                local_executor,
+                outputs,
                 shared_data,
-                compute_prec_products
-            ): ilat
+                compute_prec_products,
+            )
 
-            for ilat in range(inputs["nlat"])
-        }
-
-        for future in as_completed(futures):
-
-            try:
-
-                ilat, results_lat = future.result()
-
-                for ilon, results in results_lat:
-
-                    fill_outputs(
-                        outputs,
-                        results,
-                        ilat,
-                        ilon,
-                        shared_data["obs_median"],
-                        compute_prec_products
-                    )
-
-            except Exception as e:
-                ilat = futures[future]
-                print(f"Erro na latitude: {e}")
-                raise
-
+    else:
+        fill_outputs_from_executor(
+            executor,
+            outputs,
+            shared_data,
+            compute_prec_products,
+        )
 
     outputs = convert_outputs_to_xarray(
         outputs,
@@ -737,6 +718,45 @@ def compute_calibration_period(
 
     return outputs
  
+
+def fill_outputs_from_executor(
+    executor: ProcessPoolExecutor,
+    outputs: dict,
+    shared_data: InputsDict,
+    compute_prec_products: bool = False,
+) -> None:
+
+    futures = {
+        executor.submit(
+            process_latitude,
+            ilat,
+            shared_data,
+            compute_prec_products,
+        ): ilat
+        for ilat in range(shared_data["nlat"])
+    }
+
+    for future in as_completed(futures):
+
+        try:
+            ilat, results_lat = future.result()
+
+            for ilon, results in results_lat:
+                fill_outputs(
+                    outputs,
+                    results,
+                    ilat,
+                    ilon,
+                    shared_data["obs_median"],
+                    compute_prec_products,
+                )
+
+        except Exception as e:
+            ilat = futures[future]
+            print(f"Erro na latitude {ilat}: {e}")
+            raise
+
+
 # ============================================================
 # API PÚBLICA
 # ============================================================
@@ -745,7 +765,8 @@ def get_cox_calibration_results(
         obs_statistics: dict[str, dict[str, xr.DataArray]],
         hcst_statistics: dict[str, dict[str, xr.DataArray]],
         realtime_forecast: dict[str, xr.DataArray],
-        compute_prec_products: bool = False      
+        compute_prec_products: bool = False,
+        executor: ProcessPoolExecutor | None = None,
 ) -> dict[str, dict[str, xr.DataArray]]:
     
     periods = get_periods_aggregation()
@@ -758,7 +779,8 @@ def get_cox_calibration_results(
             obs_statistics[period],
             hcst_statistics[period],
             realtime_forecast[period],
-            compute_prec_products
+            compute_prec_products,
+            executor,
         )
 
     return results

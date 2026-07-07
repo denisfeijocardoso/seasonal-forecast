@@ -249,3 +249,58 @@ def get_linear_regression_calibr_results(
         }        
 
     return results
+
+
+def get_linear_regression_verification_results(
+        obs_statistics: dict[str, dict[str, xr.DataArray]],
+        hcst_statistics: dict[str, dict[str, xr.DataArray]],
+        realtime_forecast: dict[str, xr.DataArray],
+        correlations: dict[str, xr.DataArray] | None = None,
+) -> dict[str, dict[str, xr.DataArray]]:
+    """
+    Calcula somente os campos usados na verificacao.
+
+    A rotina operacional completa tambem gera tercis mais provaveis,
+    percentis e probabilidades de excedencia. Esses produtos nao entram nas
+    metricas/diagramas de verificacao e tornam o leave-one-year-out mais caro.
+    """
+
+    periods = get_periods_aggregation()
+
+    results = {}
+
+    for period in periods:
+        obs = obs_statistics[period]
+        hcst = hcst_statistics[period]
+        fcst = realtime_forecast[period]
+
+        correlation = (
+            correlations[period]
+            if correlations is not None
+            else compute_anomaly_correlation(
+                obs["anom"],
+                hcst["anom"],
+            )
+        )
+
+        calibration = compute_calibration(
+            obs,
+            hcst,
+            correlation,
+            fcst,
+        )
+
+        probabilities = compute_probabilities(
+            calibration,
+            obs,
+        )
+
+        results[period] = {
+            "total": calibration["mean"],
+            "anomaly": calibration["anomaly"],
+            "above_mean": probabilities["above_mean"],
+            "below_tinf": probabilities["below_tinf"],
+            "above_tsup": probabilities["above_tsup"],
+        }
+
+    return results
