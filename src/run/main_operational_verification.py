@@ -4,6 +4,7 @@ import argparse
 import logging
 
 from src.config.config_logging import setup_logging
+from src.run.common import validate_month
 from src.run.main_verification import VerificationRunConfig, run_verification
 
 
@@ -31,7 +32,11 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
 
-    validate_args(args)
+    run_operational_verification(args)
+
+
+def run_operational_verification(args: argparse.Namespace) -> None:
+    validate_month(args.month)
 
     setup_logging(
         args.year,
@@ -70,11 +75,6 @@ def main() -> None:
         args.year,
         args.month,
     )
-
-
-def validate_args(args: argparse.Namespace) -> None:
-    if args.month < 1 or args.month > 12:
-        raise ValueError("--month precisa estar entre 1 e 12.")
 
 
 def should_include_multimodel(args: argparse.Namespace) -> bool:

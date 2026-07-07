@@ -7,10 +7,10 @@ from pathlib import Path
 from src.config.config_logging import setup_logging
 from src.config.config_models import get_multimodel_version
 from src.config.c3s_versions import update_c3s_model_versions
-from src.config.loader import PARAMETERS_RUN
 from src.config.paths import PATH_POSPROC
 from src.run.main_curves import CurvesRunConfig, run_curves
 from src.run.main_realtime import RealtimeRunConfig, run_realtime
+from src.run.common import select_calibrations, select_variables, validate_month
 
 
 def parse_args() -> argparse.Namespace:
@@ -75,6 +75,13 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
+
+    run_operational_realtime(args)
+
+
+def run_operational_realtime(args: argparse.Namespace) -> None:
+    validate_month(args.month)
+
     if args.map_workers < 1:
         raise ValueError("--map-workers precisa ser maior ou igual a 1.")
     if args.curve_workers < 1:
@@ -193,22 +200,6 @@ def validate_multimodel_outputs(
         variables,
         calibrations,
     )
-
-
-def select_variables(var: str | None) -> list[str]:
-    if var is None:
-        return list(PARAMETERS_RUN["variables"])
-    if var not in PARAMETERS_RUN["variables"]:
-        raise ValueError(f"Variavel invalida: {var}")
-    return [var]
-
-
-def select_calibrations(calibration: str) -> list[str]:
-    if calibration == "all":
-        return list(PARAMETERS_RUN["calibrations"])
-    if calibration not in PARAMETERS_RUN["calibrations"]:
-        raise ValueError(f"Calibracao invalida: {calibration}")
-    return [calibration]
 
 
 if __name__ == "__main__":

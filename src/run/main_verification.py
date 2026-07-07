@@ -3,8 +3,8 @@ from dataclasses import dataclass
 import logging
 from src.config.config_logging import setup_logging
 from src.config.config_models import get_list_models
-from src.config.loader import PARAMETERS_RUN
 from src.io.verification_writer import write_verification_netcdf
+from src.run.common import select_calibrations, select_variables, validate_month
 from src.verification.cross_validation import (
     build_cross_validation_context,
     run_cross_validation_for_calibration,
@@ -76,6 +76,8 @@ def main() -> None:
 def run_verification(config: VerificationRunConfig) -> None:
 
     logger = logging.getLogger(__name__)
+
+    validate_month(config.month)
 
     variables = select_variables(config.var)
     calibrations = select_calibrations(config.calibration)
@@ -151,26 +153,6 @@ def run_verification(config: VerificationRunConfig) -> None:
         config.year,
         config.month,
     )
-
-
-def select_variables(var: str | None) -> list[str]:
-    if var is None:
-        return list(PARAMETERS_RUN["variables"])
-
-    if var not in PARAMETERS_RUN["variables"]:
-        raise ValueError(f"Variavel invalida: {var}")
-
-    return [var]
-
-
-def select_calibrations(calibration: str) -> list[str]:
-    if calibration == "all":
-        return list(PARAMETERS_RUN["calibrations"])
-
-    if calibration not in PARAMETERS_RUN["calibrations"]:
-        raise ValueError(f"Calibracao invalida: {calibration}")
-
-    return [calibration]
 
 
 def get_models_available(base: str) -> list[str]:

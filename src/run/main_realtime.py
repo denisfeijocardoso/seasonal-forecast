@@ -7,16 +7,16 @@ import os
 from .download import run_download_realtime_models
 from .grads import run_grads_maps_realtime
 from .interpolation import run_interpolation_forecast_models
-from .realtime import run_realtime_forecast
+from src.processing.realtime_products import build_realtime_products
 from src.config.config_logging import setup_logging
 from src.config.config_models import check_models, get_list_models
-from src.config.loader import PARAMETERS_RUN
 from src.io.realtime_writer import (
     write_observation_statistics_netcdf,
     write_results_netcdf,
 )
 from src.io.create_readme import write_multimodel_readme
 from src.plotting import run_python_maps_realtime
+from src.run.common import select_calibrations, select_variables, validate_month
 
 
 NO_DOWNLOAD_MODELS = {
@@ -127,26 +127,6 @@ def parse_args() -> argparse.Namespace:
     )
 
     return parser.parse_args()
-
-
-def select_variables(var: str | None) -> list[str]:
-    if var is None:
-        return list(PARAMETERS_RUN["variables"])
-
-    if var not in PARAMETERS_RUN["variables"]:
-        raise ValueError(f"Variável inválida: {var}")
-
-    return [var]
-
-
-def select_calibrations(calibration: str) -> list[str]:
-    if calibration == "all":
-        return list(PARAMETERS_RUN["calibrations"])
-
-    if calibration not in PARAMETERS_RUN["calibrations"]:
-        raise ValueError(f"Calibração inválida: {calibration}")
-
-    return [calibration]
 
 
 def validate_model_arg(
@@ -316,6 +296,8 @@ def run_map_queue(
 
 
 def run_realtime(config: RealtimeRunConfig) -> None:
+    validate_month(config.month)
+
     if config.map_workers < 1:
         raise ValueError("--map-workers precisa ser maior ou igual a 1.")
 
@@ -427,7 +409,7 @@ def run_realtime(config: RealtimeRunConfig) -> None:
                     calibrations,
                 )
 
-                results, obs_statistics = run_realtime_forecast(
+                results, obs_statistics = build_realtime_products(
                     config.base,
                     model,
                     var,

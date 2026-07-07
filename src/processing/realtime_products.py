@@ -3,14 +3,13 @@ import xarray as xr
 from src.observation import Observation
 from src.hindcast import Hindcast
 from src.forecast import Forecast
-from src.config.loader import MODELS_CONFIG
 from src.calibration.cox import get_cox_calibration_results
 from src.calibration.linear_regression import get_linear_regression_calibr_results
 from src.calibration.no_calibration import get_no_calibration_results
 
 """Nesse módulo está a função que gera as previsões em tempo-real calibradas e não calibradas."""
 
-def run_realtime_forecast(
+def build_realtime_products(
     base: str,
     model_target: str,
     var: str,
