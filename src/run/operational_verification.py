@@ -7,12 +7,12 @@ import logging
 import os
 
 from src.config.config_logging import setup_logging
-from src.config.config_models import get_list_models
 from src.run.common import validate_month
 from src.run.common import select_calibrations, select_variables
 from src.run.download import run_download_hindcast_models
 from src.run.interpolation import run_interpolation_hindcast_models
 from src.plotting import run_python_maps_verification
+from src.verification.diagrams_verif_seasonal import run_python_diagrams_verification
 from src.run.verification import (
     VerificationRunConfig,
     exclude_models,
@@ -27,9 +27,24 @@ NO_DOWNLOAD_HINDCAST_MODELS = {
     "echam",
 }
 
+NO_INTERPOLATION_HINDCAST_MODELS = {
+    "echam",
+}
+
 
 @dataclass(frozen=True)
 class VerificationMapTask:
+    base: str
+    model: str
+    var: str
+    calibration: str
+    year_ref: int
+    month_hcst: int
+    skip_existing: bool
+
+
+@dataclass(frozen=True)
+class VerificationDiagramTask:
     base: str
     model: str
     var: str
@@ -57,6 +72,15 @@ def parse_args() -> argparse.Namespace:
         help=(
             "Numero de processos usados na geracao dos mapas Python. "
             "Use 1 para rodar a fila de mapas em serie."
+        ),
+    )
+    parser.add_argument(
+        "--diagram-workers",
+        type=int,
+        default=min(4, os.cpu_count() or 1),
+        help=(
+            "Numero de processos usados na geracao dos diagramas ROC/reliability. "
+            "Use 1 para rodar a fila de diagramas em serie."
         ),
     )
     parser.add_argument(
@@ -94,14 +118,29 @@ def parse_args() -> argparse.Namespace:
         help="Pula a geracao dos mapas de verificacao.",
     )
     parser.add_argument(
+        "--skip-diagrams",
+        action="store_true",
+        help="Pula a geracao dos diagramas ROC/reliability de verificacao.",
+    )
+    parser.add_argument(
         "--only-maps",
         action="store_true",
         help="Roda apenas os mapas a partir dos NetCDFs ja existentes.",
     )
     parser.add_argument(
+        "--only-diagrams",
+        action="store_true",
+        help="Roda apenas os diagramas a partir dos NetCDFs ja existentes.",
+    )
+    parser.add_argument(
         "--overwrite-maps",
         action="store_true",
         help="Refaz mapas mesmo quando a figura ja existe.",
+    )
+    parser.add_argument(
+        "--overwrite-diagrams",
+        action="store_true",
+        help="Refaz diagramas mesmo quando a figura ja existe.",
     )
 
     return parser.parse_args()
@@ -118,6 +157,12 @@ def run_operational_verification(args: argparse.Namespace) -> None:
 
     if args.map_workers < 1:
         raise ValueError("--map-workers precisa ser maior ou igual a 1.")
+
+    if args.diagram_workers < 1:
+        raise ValueError("--diagram-workers precisa ser maior ou igual a 1.")
+
+    if args.only_maps and args.only_diagrams:
+        raise ValueError("--only-maps e --only-diagrams nao podem ser usados juntos.")
 
     args.exclude_model = getattr(args, "exclude_model", []) or []
 
@@ -141,9 +186,9 @@ def run_operational_verification(args: argparse.Namespace) -> None:
         args.exclude_model,
     )
 
-    if args.only_maps:
+    if args.only_maps or args.only_diagrams:
         logger.info(
-            "Modo apenas mapas ativo; pulando download/interpolacao/verificacao."
+            "Modo apenas produtos graficos ativo; pulando download/interpolacao/verificacao."
         )
     else:
         if not args.skip_download:
@@ -166,7 +211,9 @@ def run_operational_verification(args: argparse.Namespace) -> None:
                 )
             )
 
-    if args.skip_maps:
+    if args.only_diagrams:
+        logger.info("Modo apenas diagramas ativo; pulando mapas de verificacao.")
+    elif args.skip_maps:
         logger.info("Pulando mapas de verificacao.")
     else:
         map_tasks = build_map_tasks(args, include_multimodel)
@@ -175,6 +222,29 @@ def run_operational_verification(args: argparse.Namespace) -> None:
         logger.info(
             "Geracao de mapas de verificacao concluida: %s novas figuras.",
             generated_maps,
+        )
+
+    if args.only_maps:
+        logger.info("Modo apenas mapas ativo; pulando diagramas de verificacao.")
+    elif args.skip_diagrams:
+        logger.info("Pulando diagramas de verificacao.")
+    elif args.skip_verification and not args.only_diagrams:
+        logger.info(
+            "Pulando diagramas de verificacao porque --skip-verification esta ativo."
+        )
+    else:
+        diagram_tasks = build_diagram_tasks(args, include_multimodel)
+        logger.info(
+            "Fila de diagramas de verificacao montada: %s tarefas.",
+            len(diagram_tasks),
+        )
+        generated_diagrams = run_diagram_queue(
+            diagram_tasks,
+            args.diagram_workers,
+        )
+        logger.info(
+            "Geracao de diagramas de verificacao concluida: %s novas figuras.",
+            generated_diagrams,
         )
 
     logger.info(
@@ -200,6 +270,7 @@ def run_download_step(
         args.model,
         include_multimodel,
         args.exclude_model,
+        NO_DOWNLOAD_HINDCAST_MODELS,
     )
 
     if not models:
@@ -233,6 +304,7 @@ def run_interpolation_step(
         args.model,
         include_multimodel,
         args.exclude_model,
+        NO_INTERPOLATION_HINDCAST_MODELS,
     )
 
     if not models:
@@ -260,28 +332,30 @@ def select_hindcast_models(
     model_arg: str,
     include_multimodel: bool,
     excluded_models: tuple[str, ...] | list[str] = (),
+    ignored_models: set[str] | None = None,
 ) -> list[str]:
-    configured_models = exclude_models(
-        list(get_list_models(base)),
+    ignored_models = ignored_models or set()
+    available_models = exclude_models(
+        get_models_available(base),
         excluded_models,
     )
 
     if model_arg in {"all", "multimodel"} or include_multimodel:
-        models = configured_models
-    elif model_arg in configured_models:
+        models = available_models
+    elif model_arg in available_models:
         models = [model_arg]
-    elif model_arg in NO_DOWNLOAD_HINDCAST_MODELS:
+    elif model_arg in ignored_models:
         models = []
     else:
         raise ValueError(
             f"Modelo invalido para download/interpolacao de hindcast: {model_arg!r}. "
-            f"Modelos disponiveis: {configured_models + ['multimodel']}"
+            f"Modelos disponiveis: {available_models + ['multimodel']}"
         )
 
     return [
         model
         for model in models
-        if model not in NO_DOWNLOAD_HINDCAST_MODELS
+        if model not in ignored_models
     ]
 
 
@@ -317,6 +391,38 @@ def build_map_tasks(
     ]
 
 
+def build_diagram_tasks(
+    args: argparse.Namespace,
+    include_multimodel: bool,
+) -> list[VerificationDiagramTask]:
+    variables = select_variables(args.var)
+    calibrations = select_calibrations(args.calibration)
+    models_available = exclude_models(
+        get_models_available(args.base),
+        args.exclude_model,
+    )
+    models_to_run = select_models_to_run(
+        args.model,
+        models_available,
+        include_multimodel,
+    )
+
+    return [
+        VerificationDiagramTask(
+            base=args.base,
+            model=model,
+            var=var,
+            calibration=calibration,
+            year_ref=args.year,
+            month_hcst=args.month,
+            skip_existing=not args.overwrite_diagrams,
+        )
+        for var in variables
+        for model in models_to_run
+        for calibration in calibrations
+    ]
+
+
 def generate_maps(
     base: str,
     model: str,
@@ -338,8 +444,41 @@ def generate_maps(
     return len(generated)
 
 
+def generate_diagrams(
+    base: str,
+    model: str,
+    var: str,
+    calibration: str,
+    year_ref: int,
+    month_hcst: int,
+    skip_existing: bool,
+) -> int:
+    generated = run_python_diagrams_verification(
+        base,
+        model,
+        var,
+        calibration,
+        year_ref,
+        month_hcst,
+        skip_existing=skip_existing,
+    )
+    return len(generated)
+
+
 def run_map_task(task: VerificationMapTask) -> int:
     return generate_maps(
+        task.base,
+        task.model,
+        task.var,
+        task.calibration,
+        task.year_ref,
+        task.month_hcst,
+        task.skip_existing,
+    )
+
+
+def run_diagram_task(task: VerificationDiagramTask) -> int:
+    return generate_diagrams(
         task.base,
         task.model,
         task.var,
@@ -386,6 +525,54 @@ def run_map_queue(
                 logger.exception(
                     (
                         "Falha na geracao de mapas de verificacao: "
+                        "base=%s var=%s model=%s calibration=%s"
+                    ),
+                    task.base,
+                    task.var,
+                    task.model,
+                    task.calibration,
+                )
+                raise
+
+    return generated
+
+
+def run_diagram_queue(
+    tasks: list[VerificationDiagramTask],
+    workers: int,
+) -> int:
+    logger = logging.getLogger(__name__)
+
+    if not tasks:
+        return 0
+
+    if workers <= 1:
+        generated = 0
+        for task in tasks:
+            generated += run_diagram_task(task)
+        return generated
+
+    logger.info(
+        "Gerando diagramas de verificacao em paralelo: tasks=%s workers=%s",
+        len(tasks),
+        workers,
+    )
+
+    generated = 0
+    with ProcessPoolExecutor(max_workers=workers) as executor:
+        future_to_task = {
+            executor.submit(run_diagram_task, task): task
+            for task in tasks
+        }
+
+        for future in as_completed(future_to_task):
+            task = future_to_task[future]
+            try:
+                generated += future.result()
+            except Exception:
+                logger.exception(
+                    (
+                        "Falha na geracao de diagramas de verificacao: "
                         "base=%s var=%s model=%s calibration=%s"
                     ),
                     task.base,

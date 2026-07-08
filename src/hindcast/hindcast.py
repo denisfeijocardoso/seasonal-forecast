@@ -44,6 +44,15 @@ class Hindcast:
 
         return da.rename(rename_dims)
 
+    def _drop_auxiliary_coords(
+        self,
+        periods: dict[str, xr.DataArray],
+    ) -> dict[str, xr.DataArray]:
+        return {
+            period: da.reset_coords(drop=True)
+            for period, da in periods.items()
+        }
+
     def load_year(
         self, 
         model:str,
@@ -102,7 +111,7 @@ class Hindcast:
                 for k,y in periods.items()
             }
 
-            return periods_loaded
+            return self._drop_auxiliary_coords(periods_loaded)
 
     def load_year_members(
         self, 
@@ -158,7 +167,7 @@ class Hindcast:
                 for k,y in periods.items()
             }
 
-            return periods_loaded
+            return self._drop_auxiliary_coords(periods_loaded)
 
     def load_years_climatology(
         self, 
