@@ -1,6 +1,10 @@
 import xarray as xr
 from src.config.config_models import build_model_dir_name, get_dim_names
-from src.processing.data_processing import build_periods_model
+from src.processing.data_processing import (
+    build_periods_model,
+    drop_auxiliary_coords,
+    standardize_model_dims,
+)
 from src.config.loader import get_periods_aggregation
 from src.config.paths import PATH_FCST
 
@@ -66,6 +70,8 @@ class Forecast:
         ): 
             da = (da * 1000  * 86400)
 
+        da = standardize_model_dims(da, dims)
+
         return da
 
     def calculate_periods(
@@ -85,7 +91,7 @@ class Forecast:
                 da
         )
 
-        return model_fcst
+        return drop_auxiliary_coords(model_fcst)
 
     def load_models_available(self) -> dict[str, dict[str, xr.DataArray]]:    
         '''Processa as previsões em tempo-real para cada modelo disponível

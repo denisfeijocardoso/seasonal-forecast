@@ -22,6 +22,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--calibration", type=str, default="all")
     parser.add_argument("--map-workers", type=int, default=4)
     parser.add_argument("--curve-workers", type=int, default=8)
+    parser.add_argument(
+        "--overwrite-maps",
+        action="store_true",
+        help="Refaz mapas de previsao mesmo quando a figura ja existe.",
+    )
 
     parser.add_argument(
         "--skip-download",

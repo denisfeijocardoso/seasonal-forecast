@@ -5,6 +5,38 @@ from datetime import date
 from dateutil.relativedelta import relativedelta
 from src.config.loader import get_periods_aggregation
 
+
+def standardize_model_dims(
+        data: xr.DataArray,
+        dims: dict[str, str],
+        keep_member: bool = False
+    ) -> xr.DataArray:
+    """Padroniza dimensoes de modelos diferentes para nomes comuns."""
+
+    rename_dims = {}
+
+    if dims["lat"] in data.dims:
+        rename_dims[dims["lat"]] = "lat"
+
+    if dims["lon"] in data.dims:
+        rename_dims[dims["lon"]] = "lon"
+
+    if keep_member and dims["member"] in data.dims:
+        rename_dims[dims["member"]] = "member"
+
+    return data.rename(rename_dims)
+
+
+def drop_auxiliary_coords(
+        periods: dict[str, xr.DataArray]
+    ) -> dict[str, xr.DataArray]:
+    """Remove coordenadas escalares auxiliares dos periodos processados."""
+
+    return {
+        period: data.reset_coords(drop=True)
+        for period, data in periods.items()
+    }
+
 def select_month(
         start, 
         end,

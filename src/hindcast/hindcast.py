@@ -1,6 +1,10 @@
 import xarray as xr
 from src.config.config_models import build_model_dir_name, get_dim_names
-from src.processing.data_processing import build_periods_model
+from src.processing.data_processing import (
+    build_periods_model,
+    drop_auxiliary_coords,
+    standardize_model_dims,
+)
 from src.config.loader import get_periods_aggregation, get_climatology_period
 from src.config.paths import PATH_HCST
 
@@ -21,37 +25,6 @@ class Hindcast:
         self.models_available = models_available
 
         self.periods = get_periods_aggregation()
-
-    def _standardize_dims(
-        self,
-        da: xr.DataArray,
-        model: str,
-        keep_member: bool = False
-    ) -> xr.DataArray:
-
-        dims = get_dim_names(self.base, model)
-
-        rename_dims = {}
-
-        if dims["lat"] in da.dims:
-            rename_dims[dims["lat"]] = "lat"
-
-        if dims["lon"] in da.dims:
-            rename_dims[dims["lon"]] = "lon"
-
-        if keep_member and dims["member"] in da.dims:
-            rename_dims[dims["member"]] = "member"
-
-        return da.rename(rename_dims)
-
-    def _drop_auxiliary_coords(
-        self,
-        periods: dict[str, xr.DataArray],
-    ) -> dict[str, xr.DataArray]:
-        return {
-            period: da.reset_coords(drop=True)
-            for period, da in periods.items()
-        }
 
     def load_year(
         self, 
@@ -96,7 +69,7 @@ class Hindcast:
             ): 
                 da = (da * 1000  * 86400)
 
-            da = self._standardize_dims(da, model)
+            da = standardize_model_dims(da, dims)
 
             periods = build_periods_model(
                 model, 
@@ -111,7 +84,7 @@ class Hindcast:
                 for k,y in periods.items()
             }
 
-            return self._drop_auxiliary_coords(periods_loaded)
+            return drop_auxiliary_coords(periods_loaded)
 
     def load_year_members(
         self, 
@@ -148,9 +121,11 @@ class Hindcast:
             ): 
                 da = da * 1000 * 86400
 
-            da = self._standardize_dims(
+            dims = get_dim_names(self.base, model)
+
+            da = standardize_model_dims(
                 da,
-                model,
+                dims,
                 keep_member=True
             )
 
@@ -167,7 +142,7 @@ class Hindcast:
                 for k,y in periods.items()
             }
 
-            return self._drop_auxiliary_coords(periods_loaded)
+            return drop_auxiliary_coords(periods_loaded)
 
     def load_years_climatology(
         self, 

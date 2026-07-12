@@ -33,6 +33,7 @@ class MapTask:
     calibration: str
     year_fcst: int
     month_fcst: int
+    overwrite_maps: bool = False
 
 
 @dataclass(frozen=True)
@@ -48,6 +49,7 @@ class RealtimeRunConfig:
     skip_interpolation: bool = False
     skip_products: bool = False
     map_workers: int = min(4, os.cpu_count() or 1)
+    overwrite_maps: bool = False
 
     @classmethod
     def from_args(cls, args: argparse.Namespace) -> "RealtimeRunConfig":
@@ -63,6 +65,7 @@ class RealtimeRunConfig:
             skip_interpolation=args.skip_interpolation,
             skip_products=args.skip_products,
             map_workers=args.map_workers,
+            overwrite_maps=getattr(args, "overwrite_maps", False),
         )
 
 
@@ -113,6 +116,12 @@ def parse_args() -> argparse.Namespace:
             "Numero de processos usados na geracao dos mapas Python. "
             "Use 1 para rodar a fila de mapas em serie."
         ),
+    )
+
+    parser.add_argument(
+        "--overwrite-maps",
+        action="store_true",
+        help="Refaz mapas mesmo quando a figura ja existe.",
     )
 
     return parser.parse_args()
@@ -197,6 +206,7 @@ def generate_maps(
     calibration: str,
     year_fcst: int,
     month_fcst: int,
+    overwrite_maps: bool = False,
 ) -> int:
     generated = run_python_maps_realtime(
         base,
@@ -205,6 +215,7 @@ def generate_maps(
         calibration,
         year_fcst,
         month_fcst,
+        skip_existing=not overwrite_maps,
     )
     return len(generated)
 
@@ -217,6 +228,7 @@ def run_map_task(task: MapTask) -> int:
         task.calibration,
         task.year_fcst,
         task.month_fcst,
+        task.overwrite_maps,
     )
 
 
@@ -421,6 +433,7 @@ def run_realtime(config: RealtimeRunConfig) -> None:
                         calibration,
                         config.year,
                         config.month,
+                        config.overwrite_maps,
                     )
                 )
 

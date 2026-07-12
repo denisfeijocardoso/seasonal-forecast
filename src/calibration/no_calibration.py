@@ -17,16 +17,18 @@ def get_no_calibration_results(
 
         hcst_mean = hcst_statistics[period]["mean"]
 
-        realtime_forecast[period] = realtime_forecast[period].rename({
-            "Y": "lat",
-            "X": "lon"
-        })
+        rename_dims = {
+            dim: name
+            for dim, name in {"Y": "lat", "X": "lon"}.items()
+            if dim in realtime_forecast[period].dims
+        }
+        forecast = realtime_forecast[period].rename(rename_dims)
         
-        forecast_anomaly = realtime_forecast[period] - hcst_mean
+        forecast_anomaly = forecast - hcst_mean
 
         results[period] = {
             "anomaly": forecast_anomaly,
-            "total": realtime_forecast[period]
+            "total": forecast
         }
 
     return results
