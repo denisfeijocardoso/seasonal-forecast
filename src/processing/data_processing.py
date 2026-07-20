@@ -110,7 +110,7 @@ def build_periods_model(
 
             sel = select_month(start, end, data)    
 
-            if model != "echam" and var == "prec":
+            if model not in ("bam", "echam") and var == "prec":
                 sel = sel * ndays  
             elif var == "t2mt":
                 sel = sel - 273.15 
