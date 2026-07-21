@@ -84,10 +84,17 @@ Exemplo para uma variavel:
 python -m src.run.operational --base nmme --year 2026 --month 6 --var prec
 ```
 
-Retomar apenas curvas, usando NetCDFs ja existentes:
+Gerar somente as curvas, usando NetCDFs ja existentes (sem download, interpolacao,
+produtos, mapas ou verificacao):
 
 ```bash
-python -m src.run.operational --base nmme --year 2026 --month 6 --skip-realtime
+python -m src.run.operational --base nmme --year 2026 --month 6 --only-curves
+```
+
+Refazer somente as curvas, mesmo que as figuras ja existam:
+
+```bash
+python -m src.run.operational --base nmme --year 2026 --month 6 --only-curves --overwrite-curves
 ```
 
 Pular curvas:
@@ -119,6 +126,15 @@ Rodar somente verificacao operacional:
 ```bash
 python -m src.run.operational --base nmme --year 2026 --month 6 --skip-realtime --run-verification
 ```
+
+Principais opcoes de controle do `operational`:
+
+- `--only-curves`: valida os NetCDFs existentes e gera somente as curvas;
+- `--overwrite-curves`: refaz curvas que ja existem;
+- `--skip-curves`: executa o pipeline de previsao sem gerar curvas;
+- `--skip-realtime`: pula todo o pipeline de previsao, incluindo validacao e curvas;
+- `--skip-validation`: pula a validacao minima dos NetCDFs do multimodelo;
+- `--run-verification`: executa tambem a verificacao operacional.
 
 ## Mapas
 

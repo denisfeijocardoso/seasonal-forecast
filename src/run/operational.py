@@ -61,6 +61,14 @@ def parse_args() -> argparse.Namespace:
         help="Pula operational_realtime.",
     )
     parser.add_argument(
+        "--only-curves",
+        action="store_true",
+        help=(
+            "Gera somente as curvas a partir dos NetCDFs existentes, sem executar "
+            "download, interpolacao, produtos, mapas ou verificacao."
+        ),
+    )
+    parser.add_argument(
         "--skip-validation",
         action="store_true",
         help="Pula checagem minima dos NetCDFs do multimodelo no realtime.",
@@ -127,6 +135,11 @@ def main() -> None:
     args = parse_args()
     validate_month(args.month)
 
+    if args.only_curves and args.skip_curves:
+        raise ValueError("--only-curves e --skip-curves nao podem ser usados juntos.")
+    if args.only_curves and args.run_verification:
+        raise ValueError("--only-curves e --run-verification nao podem ser usados juntos.")
+
     setup_logging(
         args.year,
         args.month,
@@ -140,7 +153,12 @@ def main() -> None:
         args.month,
     )
 
-    if not args.skip_realtime:
+    if args.only_curves:
+        # Em operational_realtime, skip_realtime pula apenas o processamento
+        # principal e preserva a validacao dos NetCDFs e a etapa de curvas.
+        args.skip_realtime = True
+        run_operational_realtime(args)
+    elif not args.skip_realtime:
         run_operational_realtime(args)
 
     if args.run_verification:
